@@ -2,19 +2,19 @@
   (:require [aleph
              [http :as http]
              [netty :as netty]]
-            [bidi.bidi :refer [match-route*]]
-            [byte-streams :as bs]
-            [com.stuartsierra.component :as component]
             [arion.api
              [broadcast]
              [health]
              [routes :as r]
              [stats]]
+            [arion.protocols :as p]
+            [bidi.bidi :refer [match-route*]]
+            [byte-streams :as bs]
+            [com.stuartsierra.component :as component]
             [manifold.deferred :as d]
             [metrics.timers :as timer]
             [pjson.core :as json]
-            [taoensso.timbre :refer [info error warn]]
-            [arion.protocols :as p])
+            [taoensso.timbre :refer [info warn]])
   (:import clojure.lang.ExceptionInfo
            io.netty.channel.Channel
            java.io.Closeable

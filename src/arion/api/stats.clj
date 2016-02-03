@@ -1,6 +1,7 @@
 (ns arion.api.stats
-  (:require [arion.api.broadcast :refer [queue-name]]
-            [arion.api.routes :as r]
+  (:require [arion.api
+             [broadcast :refer [queue-name]]
+             [routes :as r]]
             [arion.protocols :as p]))
 
 (defmethod r/dispatch-route :stats [_ queue producer]

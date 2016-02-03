@@ -1,10 +1,11 @@
 (ns arion.broadcast
-  (:require [com.stuartsierra.component :as component]
-            [arion.protocols :as p]
-            [manifold.deferred :as d]
-            [manifold.stream :as s]
-            [taoensso.timbre :refer [debug info error warn]])
-  (:import [java.time Instant]))
+  (:require [arion.protocols :as p]
+            [com.stuartsierra.component :as component]
+            [manifold
+             [deferred :as d]
+             [stream :as s]]
+            [taoensso.timbre :refer [info warn]])
+  (:import java.time.Instant))
 
 (defn broadcast-payload [payload producer topic partition]
   (d/loop []

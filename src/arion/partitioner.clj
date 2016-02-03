@@ -1,10 +1,11 @@
 (ns arion.partitioner
-  (:require [com.stuartsierra.component :as component]
-            [arion.api.broadcast :refer [queue-name]]
+  (:require [arion.api.broadcast :refer [queue-name]]
             [arion.protocols :as p]
-            [manifold.deferred :as d]
-            [manifold.stream :as s]
-            [taoensso.timbre :refer [info error warn]]))
+            [com.stuartsierra.component :as component]
+            [manifold
+             [deferred :as d]
+             [stream :as s]]
+            [taoensso.timbre :refer [info warn]]))
 
 (defn take! [queue queue-name]
   (try (p/take! queue queue-name)

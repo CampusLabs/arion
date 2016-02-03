@@ -1,10 +1,10 @@
 (ns arion.metrics
-  (:require [com.stuartsierra.component :as component]
-            [arion.protocols :as p]
+  (:require [arion.protocols :as p]
+            [com.stuartsierra.component :as component]
             [metrics.core :refer [new-registry]]
-            [taoensso.timbre :refer [info error warn]])
+            [taoensso.timbre :refer [info]])
   (:import [com.basistech.metrics.reporting Statsd StatsdReporter]
-           [java.util.concurrent TimeUnit]))
+           java.util.concurrent.TimeUnit))
 
 (defrecord Metrics [host port registry reporter]
   component/Lifecycle

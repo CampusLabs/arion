@@ -1,15 +1,15 @@
 (ns arion.core
-  (:require [com.stuartsierra.component :as component]
-            [arion
+  (:gen-class)
+  (:require [arion
              [api :refer [new-api]]
              [broadcast :refer [new-broadcaster]]
              [kafka :refer [new-producer]]
              [metrics :refer [new-metrics]]
              [partitioner :refer [new-partitioner]]
              [queue :refer [new-durable-queue]]]
+            [com.stuartsierra.component :as component]
             [environ.core :refer [env]])
-  (:import [java.lang Runnable Runtime Thread])
-  (:gen-class))
+  (:import [java.lang Runnable Runtime Thread]))
 
 (defn create-system []
   (-> (component/system-map

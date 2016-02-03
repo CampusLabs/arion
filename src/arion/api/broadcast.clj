@@ -2,8 +2,8 @@
   (:require [arion.api.routes :as r]
             [arion.protocols :as p]
             [manifold.deferred :as d]
-            [taoensso.timbre :refer [debug info error warn]])
-  (:import [java.net URLDecoder]
+            [taoensso.timbre :refer [info]])
+  (:import java.net.URLDecoder
            java.time.Instant))
 
 (def ^:const queue-name "messages")

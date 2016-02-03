@@ -1,18 +1,18 @@
 (ns arion.kafka
-  (:require [clojure.walk :refer [stringify-keys]]
+  (:require [arion.protocols :as p]
+            [clojure.walk :refer [stringify-keys]]
             [com.stuartsierra.component :as component]
-            [arion.protocols :as p]
             [manifold.deferred :as d]
             [taoensso.timbre :refer [info warn]])
-  (:import java.util.HashMap
+  (:import [java.util
+            Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry
+            HashMap]
            java.util.concurrent.TimeUnit
            [org.apache.kafka.clients.producer
             Callback KafkaProducer ProducerRecord]
            [org.apache.kafka.common Metric MetricName]
            [org.apache.kafka.common.serialization
-            ByteArraySerializer StringSerializer]
-           [java.util
-            Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry]))
+            ByteArraySerializer StringSerializer]))
 
 (defn metric->name
   [^Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry m]
@@ -47,6 +47,7 @@
   (start [component]
     (info "starting kafka producer")
     (assoc component :producer (initialize-producer config)))
+  
   (stop [component]
     (info "closing kafka producer; waiting for queued tasks to complete")
     (.close producer 10 TimeUnit/SECONDS)

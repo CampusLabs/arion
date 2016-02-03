@@ -1,11 +1,10 @@
 (ns arion.queue
-  (:require [clj-uuid :as uuid]
+  (:require [arion.protocols :as p]
+            [clj-uuid :as uuid]
             [com.stuartsierra.component :as component]
-            [arion.protocols :as p]
             [durable-queue :as q]
             [manifold.deferred :as d]
-            [metrics.gauges :refer [defgauge]]
-            [taoensso.timbre :refer [info error warn]])
+            [taoensso.timbre :refer [error info]])
   (:import clojure.lang.IDeref
            java.io.Closeable))
 
