@@ -47,7 +47,7 @@
   (start [component]
     (info "starting kafka producer")
     (assoc component :producer (initialize-producer config)))
-  
+
   (stop [component]
     (info "closing kafka producer; waiting for queued tasks to complete")
     (.close producer 10 TimeUnit/SECONDS)

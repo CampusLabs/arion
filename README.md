@@ -5,12 +5,12 @@
 > herself into a mare, and Poseidon deceived her by assuming the figure of a
 > horse. Demeter afterwards gave birth to the horse Arion, and a daughter
 > whose name remained unknown to the uninitiated.
-> -- [Dictionary of Greek and Roman Biography and Mythology][DGRBM]
+> — [Dictionary of Greek and Roman Biography and Mythology][DGRBM]
 
 > ...there is no man that shall catch thee by a burst of speed, neither pass
 > thee by, nay, not though in pursuit he were driving goodly Arion, the swift
 > horse of Adrastus, that was of heavenly stock
-> -- [Homer, Iliad. 23.346][Homer]
+> — [Homer, Iliad. 23.346][Homer]
 
 Born of [Demeter][] and [Poseidon][], [Arion][] will reliably speak to
 [Kafka][] for you. Specifically, Arion provides an HTTP interface to the
@@ -70,8 +70,9 @@ Upon reception of the request, the message will be immediately written to the
 disk-backed durable queue and flushed to disk, but a response will not be
 returned until all in-sync replicas have confirmed receipt of the message.
 
-If Kafka returns an error, the message will be retried until it succeeds,
-which means that the request may be held open indefinitely.
+If the operation fails (for example, if the Kafka broker cannot be reached), 
+the message will be retried until it succeeds, which means that the request 
+may be held open indefinitely.
 
 Example response:
 
@@ -84,7 +85,7 @@ Date: Tue, 02 Feb 2016 23:31:10 GMT
 content-length: 110
 ```
 
-```json
+```js
 {
   "status": "sent",
   "key": "mykey",
@@ -121,7 +122,7 @@ Date: Tue, 02 Feb 2016 23:31:46 GMT
 content-length: 132
 ```
 
-```json
+```js
 {
   "status": "enqueued",
   "topic": "test",
@@ -152,7 +153,7 @@ persistent queue has allocated, the number of slabs currently in use, and the
 number of items that have been enqueued, retried, completed, and currently in
 progress. It also includes [metrics reported by the Kafka producer][metrics].
 
-```json
+```js
 {
   "queue": {
     "num-slabs": 1,
@@ -179,7 +180,7 @@ cannot be reached, as asynchronous message requests will be unaffected.
 <GET|HEAD> http://<host>:<port>/health-check
 ```
 
-```json
+```js
 {
   "status": "ok"
 }
