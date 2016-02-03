@@ -20,6 +20,8 @@ Arion supports Kafka 0.9.0.0.
 
 ## Installation
 
+[![Docker Repository on Quay](https://quay.io/repository/orgsync/arion/status?token=b21afbe2-abaa-4e76-8aec-f37b3a03ece5 "Docker Repository on Quay")](https://quay.io/repository/orgsync/arion)
+
 Arion can be run using Docker or built into a standalone jar using
 `lein uberjar`.
 
