@@ -51,7 +51,8 @@
       (when (or @closing? (not (q/put! durable-queue queue-name entry)))
         (throw (ex-info "unable to enqueue message"
                         {:status 503
-                         :body   {:error "unable to enqueue message"}})))
+                         :body   {:status :error
+                                  :error  "unable to enqueue message"}})))
       id))
 
   (put-and-complete! [queue queue-name message]

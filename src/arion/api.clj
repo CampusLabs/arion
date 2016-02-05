@@ -28,7 +28,8 @@
     (catch URISyntaxException e
       (throw (ex-info "malformed URL"
                       {:status 400
-                       :body   {:error   "malformed URL"
+                       :body   {:status  :error
+                                :error   "malformed URL"
                                 :details (.getMessage e)}})))))
 
 (defn route-parser [{:keys [uri] :as req}]
@@ -59,7 +60,8 @@
               (fn [e]
                 (warn "request failed due to uncaught exception:" e)
                 {:status 500
-                 :body   {:message "server encountered an error processing request"
+                 :body   {:status  :error
+                          :message "server encountered an error processing request"
                           :details (.getMessage e)}})))
 
         (fn [res]

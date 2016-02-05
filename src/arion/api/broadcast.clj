@@ -47,11 +47,13 @@
     (when-not (re-find topic-pattern topic)
       (throw
         (ex-info "malformed topic"
-                 {:status 400 :body {:error "malformed topic"}})))
+                 {:status 400 :body {:status :error
+                                     :error  "malformed topic"}})))
 
     (case mode
       "sync" (send-sync! topic key body queue closed)
       "async" (send-async! topic key body queue)
       (throw
         (ex-info "unsupported broadcast mode"
-                 {:status 400 :body {:error "unsupported broadcast mode"}})))))
+                 {:status 400 :body {:status :error
+                                     :error  "unsupported broadcast mode"}})))))
