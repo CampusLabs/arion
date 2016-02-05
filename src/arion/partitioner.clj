@@ -13,22 +13,22 @@
          (warn "unable to take message from queue:" (.getMessage e)))))
 
 (defn process-payload [payload producer partition-stream streams]
-  (let [{:keys [topic key]} @payload]
-    (d/let-flow' [partition (p/key->partition producer topic key)
-                  stream-key [topic partition]]
+  (d/let-flow' [{:keys [topic key]} @payload
+                partition (p/key->partition producer topic key)
+                stream-key [topic partition]]
 
-      (if-let [stream (get streams stream-key)]
-        (d/chain' (s/put! stream payload)
-          #(when % streams))
+    (if-let [stream (get streams stream-key)]
+      (d/chain' (s/put! stream payload)
+        #(when % streams))
 
-        (let [new-stream (s/stream* {:buffer-size 64})]
-          (s/on-drained partition-stream #(s/close! new-stream))
-          (d/chain' (s/put! new-stream payload)
-            (fn [_] (s/put! partition-stream
-                            {:topic     topic
-                             :partition partition
-                             :stream    new-stream}))
-            #(when % (assoc streams stream-key new-stream))))))))
+      (let [new-stream (s/stream* {:buffer-size 64})]
+        (s/on-drained partition-stream #(s/close! new-stream))
+        (d/chain' (s/put! new-stream payload)
+          (fn [_] (s/put! partition-stream
+                          {:topic     topic
+                           :partition partition
+                           :stream    new-stream}))
+          #(when % (assoc streams stream-key new-stream)))))))
 
 (defn process-queue [partition-stream queue producer]
   (d/loop [streams {}]
