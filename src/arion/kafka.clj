@@ -63,11 +63,19 @@
 
   p/Partition
   (key->partition [_ topic key]
-    (let [partitions (.partitionsFor producer topic)]
-      (-> (if key
-            (nth partitions (mod (.hashCode key) (.size partitions)))
-            (rand-nth partitions))
-          (.partition))))
+    (d/loop []
+      (-> (d/future
+            (let [partitions (.partitionsFor producer topic)]
+              (-> (if key
+                    (nth partitions (mod (.hashCode key) (.size partitions)))
+                    (rand-nth partitions))
+                  (.partition))))
+          (d/timeout! 30000)
+          (d/catch'
+            (fn [e]
+              (warn "Unable find partitions for topic" topic
+                    "-" (.getMessage e))
+              (d/recur))))))
 
   p/Measurable
   (metrics [_]
