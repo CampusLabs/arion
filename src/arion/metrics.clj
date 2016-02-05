@@ -12,8 +12,6 @@
     (let [statsd (Statsd. host port)
           registry (new-registry)
           reporter (-> (StatsdReporter/forRegistry registry)
-                       (.convertDurationsTo TimeUnit/MILLISECONDS)
-                       (.convertRatesTo TimeUnit/SECONDS)
                        (.build statsd))]
       (info "starting statsd metrics reporter")
       (.start reporter 5 TimeUnit/SECONDS)
