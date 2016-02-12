@@ -27,12 +27,13 @@
   component/Lifecycle
   (start [component]
     (let [registry (p/get-registry metrics)
-          prefix ["arion" "jvm"]]
-      (jm/register-jvm-attribute-gauge-set registry prefix)
-      (jm/register-memory-usage-gauge-set registry prefix)
-      (jm/register-file-descriptor-ratio-gauge-set registry prefix)
-      (jm/register-garbage-collector-metric-set registry prefix)
-      (jm/register-thread-state-gauge-set registry prefix)
+          prefix   #(conj ["arion" "jvm"] %)]
+
+      (jm/register-jvm-attribute-gauge-set registry (prefix "attributes"))
+      (jm/register-memory-usage-gauge-set registry (prefix "memory"))
+      (jm/register-file-descriptor-ratio-gauge-set registry (prefix "fd"))
+      (jm/register-garbage-collector-metric-set registry (prefix "gc"))
+      (jm/register-thread-state-gauge-set registry (prefix "threads"))
 
       (register-queue-gauges! registry queue)
       (register-producer-gauges! registry producer))
