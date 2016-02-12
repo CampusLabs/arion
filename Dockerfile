@@ -20,4 +20,4 @@ ENV STATSD_PORT 8125
 EXPOSE 80
 VOLUME [ "/var/arion" ]
 
-CMD exec java -Xmx${HEAP_SIZE} -jar arion.jar
+CMD exec java -server -XX:+UseG1GC -Xmx${HEAP_SIZE} -Xms${HEAP_SIZE} -jar arion.jar
