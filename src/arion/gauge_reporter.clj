@@ -4,7 +4,7 @@
             [camel-snake-kebab.core :refer [->snake_case]]
             [com.stuartsierra.component :as component]
             [metrics.gauges :as gauge]
-            [metrics.jvm.core :refer [instrument-jvm]]))
+            [metrics.jvm.core :as jm]))
 
 (defn format-metric [metric]
   (->snake_case (name metric)))
@@ -26,8 +26,14 @@
 (defrecord GaugeReporter [metrics queue producer]
   component/Lifecycle
   (start [component]
-    (let [registry (p/get-registry metrics)]
-      (instrument-jvm registry)
+    (let [registry (p/get-registry metrics)
+          prefix ["arion" "jvm"]]
+      (jm/register-jvm-attribute-gauge-set registry prefix)
+      (jm/register-memory-usage-gauge-set registry prefix)
+      (jm/register-file-descriptor-ratio-gauge-set registry prefix)
+      (jm/register-garbage-collector-metric-set registry prefix)
+      (jm/register-thread-state-gauge-set registry prefix)
+
       (register-queue-gauges! registry queue)
       (register-producer-gauges! registry producer))
     component)
