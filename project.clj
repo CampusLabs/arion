@@ -3,7 +3,7 @@
   :url "https://github.com/orgsync/arion"
   :license {:name "Copyright 2016 OrgSync."}
   :dependencies [[aleph "0.4.1-beta3"]
-                 [bidi "1.25.0"]
+                 [bidi "1.25.1"]
                  [byte-streams "0.2.1-alpha1"]
                  [camel-snake-kebab "0.3.2"]
                  [com.basistech/metrics-statsd "3.0.0"]
@@ -14,6 +14,7 @@
                  [factual/durable-queue "0.1.5"]
                  [manifold "0.1.2"]
                  [metrics-clojure "2.6.1"]
+                 [metrics-clojure-jvm "2.6.1"]
                  [org.apache.kafka/kafka-clients "0.9.0.0"]
                  [org.clojure/clojure "1.8.0"]
                  [pjson "0.3.1"]]

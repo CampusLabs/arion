@@ -3,7 +3,8 @@
             [arion.protocols :as p]
             [camel-snake-kebab.core :refer [->snake_case]]
             [com.stuartsierra.component :as component]
-            [metrics.gauges :as gauge]))
+            [metrics.gauges :as gauge]
+            [metrics.jvm.core :refer [instrument-jvm]]))
 
 (defn format-metric [metric]
   (->snake_case (name metric)))
@@ -26,6 +27,7 @@
   component/Lifecycle
   (start [component]
     (let [registry (p/get-registry metrics)]
+      (instrument-jvm registry)
       (register-queue-gauges! registry queue)
       (register-producer-gauges! registry producer))
     component)
