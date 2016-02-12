@@ -12,7 +12,9 @@
             [byte-streams :as bs]
             [com.stuartsierra.component :as component]
             [manifold.deferred :as d]
-            [metrics.timers :as timer]
+            [metrics
+             [meters :as meter]
+             [timers :as timer]]
             [pjson.core :as json]
             [taoensso.timbre :refer [info warn]])
   (:import clojure.lang.ExceptionInfo
@@ -41,7 +43,9 @@
     (d/on-realized closed close-metrics close-metrics)
     (assoc req :closed closed)))
 
-(defn make-handler [queue producer response-timer]
+(defn make-handler
+  [queue producer {:keys [response-timer success client-error server-error]
+                   :as metrics}]
   (fn [{:keys [request-method] :as req}]
     (let [timer-context (timer/start response-timer)]
       (d/chain'
@@ -49,16 +53,22 @@
               validate-url
               route-parser
               #(add-close-deferred % timer-context)
-              #(r/dispatch-route % queue producer))
+              #(r/dispatch-route % queue producer metrics)
+              #(do (meter/mark! success) %))
 
             (d/catch' ExceptionInfo
               (fn [e]
                 (warn "request failed with:" (.getMessage e))
-                (ex-data e)))
+                (let [{:keys [status] :as response} (ex-data e)]
+                  (if (<= 400 status 499)
+                    (meter/mark! client-error)
+                    (meter/mark! server-error))
+                  response)))
 
             (d/catch'
               (fn [e]
                 (warn "request failed due to uncaught exception:" e)
+                (meter/mark! server-error)
                 {:status 500
                  :body   {:status  :error
                           :message "server encountered an error processing request"
@@ -75,10 +85,19 @@
   component/Lifecycle
   (start [component]
     (info "starting http server")
-    (let [registry       (p/get-registry metrics)
-          prefix         ["arion" "api"]
-          response-timer (timer/timer registry (conj prefix "response_time"))
-          handler (make-handler queue producer response-timer)]
+    (let [registry   (p/get-registry metrics)
+          prefix     ["arion" "api"]
+          make-timer #(timer/timer registry (conj prefix %))
+          make-meter #(meter/meter registry (conj prefix %))
+          mreg       {:response-timer (make-timer "response_time")
+                      :sync-timer     (make-timer "sync_put_time")
+                      :async-timer    (make-timer "async_put_time")
+                      :accepted       (make-meter "accepted")
+                      :created        (make-meter "created")
+                      :success        (make-meter "success")
+                      :client-error   (make-meter "client_error")
+                      :server-error   (make-meter "server_error")}
+          handler (make-handler queue producer mreg)]
       (assoc component :server (http/start-server handler {:port port}))))
 
   (stop [component]

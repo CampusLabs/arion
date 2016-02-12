@@ -1,8 +1,8 @@
 (ns arion.api.routes)
 
-(defmulti dispatch-route (fn [{:keys [handler]} _ _] handler))
+(defmulti dispatch-route (fn [{:keys [handler]} _ _ _] handler))
 
-(defmethod dispatch-route :default [_ _ _]
+(defmethod dispatch-route :default [_ _ _ _]
   {:status 400 :body {:error "bad request"}})
 
 (def routes

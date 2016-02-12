@@ -4,7 +4,7 @@
              [routes :as r]]
             [arion.protocols :as p]))
 
-(defmethod r/dispatch-route :stats [_ queue producer]
+(defmethod r/dispatch-route :stats [_ queue producer _]
   {:status 200
    :body {:queue (get (p/metrics queue) queue-name {:status :empty})
           :kafka (p/metrics producer)}})
