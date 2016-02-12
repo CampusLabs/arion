@@ -42,14 +42,17 @@
         (info "retrying")
         (recur config))))
 
-(defrecord Producer [config metrics producer]
+(defrecord Producer [config metrics producer closed?]
   component/Lifecycle
   (start [component]
     (info "starting kafka producer")
-    (assoc component :producer (initialize-producer config)))
+    (assoc component
+      :producer (initialize-producer config)
+      :closed? (atom false)))
 
   (stop [component]
     (info "closing kafka producer; waiting for queued tasks to complete")
+    (reset! closed? true)
     (.close producer 10 TimeUnit/SECONDS)
     (info "kafka producer closed")
     (assoc component :producer nil))
@@ -64,18 +67,19 @@
   p/Partition
   (key->partition [_ topic key]
     (d/loop []
-      (-> (d/future
-            (let [partitions (.partitionsFor producer topic)]
-              (-> (if key
-                    (nth partitions (mod (.hashCode key) (.size partitions)))
-                    (rand-nth partitions))
-                  (.partition))))
-          (d/timeout! 30000)
-          (d/catch'
-            (fn [e]
-              (warn "Unable find partitions for topic" topic
-                    "-" (.getMessage e))
-              (d/recur))))))
+      (when (not @closed?)
+        (-> (d/future
+              (let [partitions (.partitionsFor producer topic)]
+                (-> (if key
+                      (nth partitions (mod (.hashCode key) (.size partitions)))
+                      (rand-nth partitions))
+                    (.partition))))
+            (d/timeout! 30000)
+            (d/catch'
+              (fn [e]
+                (warn "Unable find partitions for topic" topic
+                      "-" (.getMessage e))
+                (d/recur)))))))
 
   p/Measurable
   (metrics [_]
@@ -90,4 +94,4 @@
                   :compression.type  "gzip"
                   :retries           (int 2147483647)}
                  stringify-keys)
-             nil nil))
+             nil nil nil))
