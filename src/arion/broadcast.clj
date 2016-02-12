@@ -4,42 +4,69 @@
             [manifold
              [deferred :as d]
              [stream :as s]]
+            [metrics
+             [counters :as counter]
+             [meters :as meter]
+             [timers :as timer]]
             [taoensso.timbre :refer [info warn]])
   (:import java.time.Instant))
 
-(defn broadcast-payload [payload producer topic partition]
+(defn broadcast-payload
+  [payload producer topic partition
+   {:keys [broadcast broadcast-time broadcast-error]}]
+
   (d/loop []
-    (let [{:keys [key message]} @payload]
+    (let [{:keys [key message]} @payload
+          timer-context (timer/start broadcast-time)]
+      (meter/mark! broadcast)
+
       (-> (d/chain' (p/send! producer topic key partition message)
             (fn [response]
               (let [sent (Instant/now)]
+                (timer/stop timer-context)
                 (p/complete! payload (assoc response :sent sent)))))
 
           (d/catch'
             (fn [e]
-              (warn "exception while broadcasting:" (.getMessage e) "- retrying")
+              (warn "exception while broadcasting:" (.getMessage e))
+              (meter/mark! broadcast-error)
               (d/recur)))))))
 
-(defn broadcast-partition [{:keys [topic partition stream]} producer]
+(defn broadcast-partition
+  [{:keys [topic partition stream]} producer {:keys [partitions] :as metrics}]
   (info "broadcasting messages for topic" topic "partition" partition)
+  (counter/inc! partitions)
+
   (d/loop []
     (d/chain' (s/take! stream)
-      #(when % (broadcast-payload % producer topic partition))
+      #(when % (broadcast-payload % producer topic partition metrics))
       #(if %
         (d/recur)
-        (info "stopped broadcasts for topic" topic "partition" partition)))))
+        (do (info "stopped broadcasts for topic" topic "partition" partition)
+            (counter/dec! partitions))))))
 
-(defn consume-partitions [partition-stream producer]
+(defn consume-partitions [partition-stream producer metrics]
   (s/consume
-    #(broadcast-partition % producer)
+    #(broadcast-partition % producer metrics)
     partition-stream))
 
 (defrecord Broadcaster [metrics partitioner producer]
   component/Lifecycle
   (start [component]
-    (info "starting broadcaster")
-    (consume-partitions (p/partitions partitioner) producer)
-    component)
+    (let [registry     (p/get-registry metrics)
+          prefix       ["arion" "broadcast"]
+          make-counter #(counter/counter registry (conj prefix %))
+          make-meter   #(meter/meter registry (conj prefix %))
+          make-timer   #(timer/timer registry (conj prefix %))
+          mreg         {:partitions      (make-counter "partitions")
+                        :broadcast-time  (make-timer "time")
+                        :broadcast       (make-meter "attempt")
+                        :broadcast-error (make-meter "error")}]
+
+      (info "starting broadcaster")
+      (consume-partitions (p/partitions partitioner) producer mreg)
+
+      component))
 
   (stop [component]
     component))
