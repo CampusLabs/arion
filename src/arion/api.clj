@@ -37,49 +37,44 @@
 (defn route-parser [{:keys [uri] :as req}]
   (match-route* r/routes uri req))
 
-(defn add-close-deferred [req timer-context]
-  (let [closed (-> req ^Channel .ch .closeFuture netty/wrap-future)
-        close-metrics (fn [_] (timer/stop timer-context))]
-    (d/on-realized closed close-metrics close-metrics)
-    (assoc req :closed closed)))
+(defn add-close-deferred [req]
+  (assoc req :closed (-> req ^Channel .ch .closeFuture netty/wrap-future)))
 
 (defn make-handler
-  [queue producer {:keys [response-timer success client-error server-error]
-                   :as metrics}]
+  [queue producer {:keys [success client-error server-error] :as metrics}]
   (fn [{:keys [request-method] :as req}]
-    (let [timer-context (timer/start response-timer)]
-      (d/chain'
-        (-> (d/chain' (update req :body #(and % (bs/to-byte-array %)))
-              validate-url
-              route-parser
-              #(add-close-deferred % timer-context)
-              #(r/dispatch-route % queue producer metrics)
-              #(do (meter/mark! success) %))
+    (d/chain'
+      (-> (d/chain' (update req :body #(and % (bs/to-byte-array %)))
+            validate-url
+            route-parser
+            #(add-close-deferred %)
+            #(r/dispatch-route % queue producer metrics)
+            #(do (meter/mark! success) %))
 
-            (d/catch' ExceptionInfo
-              (fn [e]
-                (warn "request failed with:" (.getMessage e))
-                (let [{:keys [status] :as response} (ex-data e)]
-                  (if (<= 400 status 499)
-                    (meter/mark! client-error)
-                    (meter/mark! server-error))
-                  response)))
+          (d/catch' ExceptionInfo
+            (fn [e]
+              (warn "request failed with:" (.getMessage e))
+              (let [{:keys [status] :as response} (ex-data e)]
+                (if (<= 400 status 499)
+                  (meter/mark! client-error)
+                  (meter/mark! server-error))
+                response)))
 
-            (d/catch'
-              (fn [e]
-                (warn "request failed due to uncaught exception:" e)
-                (meter/mark! server-error)
-                {:status 500
-                 :body   {:status  :error
-                          :message "server encountered an error processing request"
-                          :details (.getMessage e)}})))
+          (d/catch'
+            (fn [e]
+              (warn "request failed due to uncaught exception:" e)
+              (meter/mark! server-error)
+              {:status 500
+               :body   {:status  :error
+                        :message "server encountered an error processing request"
+                        :details (.getMessage e)}})))
 
-        (fn [res]
-          (if (= request-method :head)
-            (assoc res :body nil)
-            (-> res
-                (update :headers assoc :content-type "application/json")
-                (update :body json/write-str))))))))
+      (fn [res]
+        (if (= request-method :head)
+          (assoc res :body nil)
+          (-> res
+              (update :headers assoc :content-type "application/json")
+              (update :body json/write-str)))))))
 
 (defrecord Api [port metrics producer queue server]
   component/Lifecycle
@@ -89,8 +84,7 @@
           prefix     ["arion" "api"]
           make-timer #(timer/timer registry (conj prefix %))
           make-meter #(meter/meter registry (conj prefix %))
-          mreg       {:response-timer (make-timer "response_time")
-                      :sync-timer     (make-timer "sync_put_time")
+          mreg       {:sync-timer     (make-timer "sync_put_time")
                       :async-timer    (make-timer "async_put_time")
                       :accepted       (make-meter "accepted")
                       :created        (make-meter "created")
