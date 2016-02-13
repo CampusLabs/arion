@@ -86,8 +86,6 @@
           make-meter #(meter/meter registry (conj prefix %))
           mreg       {:sync-timer     (make-timer "sync_put_time")
                       :async-timer    (make-timer "async_put_time")
-                      :accepted       (make-meter "accepted")
-                      :created        (make-meter "created")
                       :success        (make-meter "success")
                       :client-error   (make-meter "client_error")
                       :server-error   (make-meter "server_error")}

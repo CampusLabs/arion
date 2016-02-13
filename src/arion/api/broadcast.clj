@@ -2,9 +2,7 @@
   (:require [arion.api.routes :as r]
             [arion.protocols :as p]
             [manifold.deferred :as d]
-            [metrics
-             [meters :as meter]
-             [timers :as timer]]
+            [metrics.timers :as timer]
             [taoensso.timbre :refer [info]])
   (:import java.net.URLDecoder
            java.time.Instant))
@@ -19,7 +17,7 @@
    :enqueued (Instant/now)
    :message message})
 
-(defn send-sync! [topic key message queue closed sync-timer created]
+(defn send-sync! [topic key message queue closed sync-timer]
   (let [payload (compose-payload topic key message)
         timer-context (timer/start sync-timer)
         response-deferred (p/put-and-complete! queue queue-name payload)]
@@ -32,16 +30,14 @@
     (d/chain' response-deferred
       (fn [response]
         (timer/stop timer-context)
-        (meter/mark! created)
         {:status 201 :body (-> {:status :sent :key key}
                                (merge response))}))))
 
-(defn send-async! [topic key message queue async-timer accepted]
+(defn send-async! [topic key message queue async-timer]
   (let [payload (compose-payload topic key message)
         timer-context (timer/start async-timer)
         id (p/put! queue queue-name payload)]
     (timer/stop timer-context)
-    (meter/mark! accepted)
     {:status 202 :body (-> {:status :enqueued}
                            (merge payload)
                            (dissoc :message)
@@ -50,7 +46,7 @@
 (defmethod r/dispatch-route :broadcast
   [{{:keys [mode topic key]} :route-params
     :keys [body closed]}
-   queue _ {:keys [sync-timer async-timer created accepted]}]
+   queue _ {:keys [sync-timer async-timer]}]
 
   (let [topic (URLDecoder/decode topic)
         key   (when key (URLDecoder/decode key))]
@@ -62,8 +58,8 @@
                                      :error  "malformed topic"}})))
 
     (case mode
-      "sync" (send-sync! topic key body queue closed sync-timer created)
-      "async" (send-async! topic key body queue async-timer accepted)
+      "sync" (send-sync! topic key body queue closed sync-timer)
+      "async" (send-async! topic key body queue async-timer)
       (throw
         (ex-info "unsupported broadcast mode"
                  {:status 400 :body {:status :error
