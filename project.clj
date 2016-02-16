@@ -20,6 +20,6 @@
                  [pjson "0.3.1"]]
   :main arion.core
   :uberjar-name "arion.jar"
-  :profiles {:dev     {:dependencies [[criterium "0.4.3"]]}
+  :profiles {:dev     {:dependencies [[criterium "0.4.4"]]}
              :uberjar {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]
                        :aot :all}})
