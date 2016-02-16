@@ -14,7 +14,7 @@
           reporter (-> (StatsdReporter/forRegistry registry)
                        (.build statsd))]
       (info "starting statsd metrics reporter")
-      (.start reporter 5 TimeUnit/SECONDS)
+      (.start reporter 10 TimeUnit/SECONDS)
       (assoc component :registry registry :reporter reporter)))
 
   (stop [component]
