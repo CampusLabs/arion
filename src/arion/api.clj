@@ -40,9 +40,16 @@
 (defn add-close-deferred [req]
   (assoc req :closed (-> req ^Channel .ch .closeFuture netty/wrap-future)))
 
+(defn format-response [{:keys [request-method] :as res}]
+  (if (= request-method :head)
+    (assoc res :body nil)
+    (-> res
+        (update :headers assoc :content-type "application/json")
+        (update :body json/write-str))))
+
 (defn make-handler
   [queue producer {:keys [success client-error server-error] :as metrics}]
-  (fn [{:keys [request-method] :as req}]
+  (fn [req]
     (d/chain'
       (-> (d/chain' (update req :body #(and % (bs/to-byte-array %)))
             validate-url
@@ -69,12 +76,7 @@
                         :message "server encountered an error processing request"
                         :details (.getMessage e)}})))
 
-      (fn [res]
-        (if (= request-method :head)
-          (assoc res :body nil)
-          (-> res
-              (update :headers assoc :content-type "application/json")
-              (update :body json/write-str)))))))
+      format-response)))
 
 (defrecord Api [port metrics producer queue server]
   component/Lifecycle
