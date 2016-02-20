@@ -30,7 +30,7 @@
                  [manifold "0.1.2"]
                  [metrics-clojure "2.6.1"]
                  [metrics-clojure-jvm "2.6.1"]
-                 [org.apache.kafka/kafka-clients "0.9.0.0"]
+                 [org.apache.kafka/kafka-clients "0.9.0.1"]
                  [org.clojure/clojure "1.8.0"]
                  [pjson "0.3.1"]]
   :main arion.core
