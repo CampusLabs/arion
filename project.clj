@@ -12,7 +12,7 @@
 ;See the License for the specific language governing permissions and
 ;limitations under the License.
 
-(defproject arion "1.0.8-SNAPSHOT"
+(defproject arion "1.1.0"
   :description "Talks to Kafka so you don't have to"
   :url "https://github.com/orgsync/arion"
   :license {:name "Apache 2.0"
