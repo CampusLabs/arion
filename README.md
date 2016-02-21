@@ -32,6 +32,7 @@ Supply the following environment variables:
 |  variable | default |  description |
 |-----------|---------|--------------|
 |`ARION_PORT` | `80` | http server port |
+|`ARION_IDLE_TIMEOUT` | `15` | disconnect after specified seconds of no activity; 0 to disable |
 |`ARION_QUEUE_PATH` | `/var/arion` | directory used by the durable queue to write slabs |
 |`KAFKA_BOOTSTRAP` | `localhost:9092` | addresses of initial Kafka brokers [(format)][boot] |
 |`STATSD_HOST` | `localhost` | [StatsD][] metrics server host |
@@ -73,7 +74,7 @@ returned until all in-sync replicas have confirmed receipt of the message.
 
 If the operation fails (for example, if the Kafka broker cannot be reached), 
 the message will be retried until it succeeds, which means that the request 
-may be held open indefinitely.
+may be held open indefinitely if the idle timeout is disabled.
 
 Example response:
 

@@ -16,9 +16,10 @@
              [meters :as meter]
              [timers :as timer]]
             [pjson.core :as json]
-            [taoensso.timbre :refer [info warn]])
+            [taoensso.timbre :refer [debug info warn]])
   (:import clojure.lang.ExceptionInfo
-           io.netty.channel.Channel
+           [io.netty.channel Channel ChannelDuplexHandler ChannelPipeline]
+           [io.netty.handler.timeout IdleState IdleStateEvent IdleStateHandler]
            java.io.Closeable
            [java.net URI URISyntaxException]))
 
@@ -78,7 +79,16 @@
 
       format-response)))
 
-(defrecord Api [port metrics producer queue server]
+(defn ^ChannelDuplexHandler idle-handler [idle-meter]
+  (proxy [ChannelDuplexHandler] []
+    (userEventTriggered [ctx e]
+      (when (and (instance? IdleStateEvent e)
+                 (= (.state e) (IdleState/ALL_IDLE)))
+        (debug "closing idle connection")
+        (meter/mark! idle-meter)
+        (.close ctx)))))
+
+(defrecord Api [port timeout metrics producer queue server]
   component/Lifecycle
   (start [component]
     (info "starting http server")
@@ -91,13 +101,22 @@
                       :success        (make-meter "success")
                       :client-error   (make-meter "client_error")
                       :server-error   (make-meter "server_error")}
+          idle-meter (make-meter "idle_close")
+          pipeline-xf (fn [^ChannelPipeline pipeline]
+                        (doto pipeline
+                          (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
+                          (.addLast "idle-handler" (idle-handler idle-meter))))
           handler (make-handler queue producer mreg)]
-      (assoc component :server (http/start-server handler {:port port}))))
+
+      (assoc component
+        :server (http/start-server
+                  handler {:port port
+                           :pipeline-transform pipeline-xf}))))
 
   (stop [component]
     (info "stopping http server")
     (.close ^Closeable server)
     (assoc component :server nil)))
 
-(defn new-api [port]
-  (Api. port nil nil nil nil))
+(defn new-api [port timeout]
+  (Api. port timeout nil nil nil nil))

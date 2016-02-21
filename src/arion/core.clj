@@ -16,7 +16,8 @@
 
 (defn create-system []
   (-> (component/system-map
-        :api (new-api (Integer. ^String (env :arion-port "80")))
+        :api (new-api (Integer. ^String (env :arion-port "80"))
+                      (Integer. ^String (env :arion-idle-timeout "15")))
         :broadcaster (new-broadcaster)
         :gauge-reporter (new-gauge-reporter)
         :metrics (new-metrics
