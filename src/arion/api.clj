@@ -91,7 +91,7 @@
 
 (def connection-timer-key (AttributeKey/valueOf "connection_duration"))
 
-(defn ^ChannelDuplexHandler connection-tracker [conn-count conn-timer]
+(defn ^ChannelDuplexHandler connection-metrics [conn-count conn-timer]
   (proxy [ChannelDuplexHandler] []
     (channelActive [ctx]
       (let [attr (.attr ctx connection-timer-key)]
@@ -124,7 +124,7 @@
 
           pipeline-xf  (fn [^ChannelPipeline pipeline]
                          (doto pipeline
-                           (.addFirst "conn-state" (connection-tracker conn-count conn-timer))
+                           (.addFirst "connection-metrics" (connection-metrics conn-count conn-timer))
                            (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
                            (.addLast "idle-handler" (idle-handler idle-meter))))
 
