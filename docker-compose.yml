@@ -5,7 +5,6 @@ services:
     image: jplock/zookeeper:3.4.6
     ports:
       - '2181'
-    hostname: zookeeper
 
   kafka:
     image: v1.quay.io/orgsync/kafka:0.9.0.0-1
@@ -22,16 +21,15 @@ services:
     image: quay.io/orgsync/statsd:0.1.1
     ports:
       - "8125/udp"
-    hostname: statsd
 
   arion:
     build: .
     ports:
       - '80:80'
-    hostname: arion
     depends_on:
       - kafka
       - statsd
     environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
       - STATSD_HOST=statsd
       - STATSD_PORT=8125
