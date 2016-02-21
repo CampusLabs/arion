@@ -17,7 +17,7 @@
              [meters :as meter]
              [timers :as timer]]
             [pjson.core :as json]
-            [taoensso.timbre :refer [debug info warn]])
+            [taoensso.timbre :refer [info warn]])
   (:import clojure.lang.ExceptionInfo
            [io.netty.channel Channel ChannelDuplexHandler ChannelPipeline]
            [io.netty.handler.timeout IdleState IdleStateEvent IdleStateHandler]
@@ -86,7 +86,6 @@
     (userEventTriggered [ctx e]
       (when (and (instance? IdleStateEvent e)
                  (= (.state e) (IdleState/ALL_IDLE)))
-        (debug "closing idle connection")
         (meter/mark! idle-meter)
         (.close ctx)))))
 
@@ -96,12 +95,10 @@
   (proxy [ChannelDuplexHandler] []
     (channelActive [ctx]
       (let [attr (.attr ctx connection-timer-key)]
-        (debug "opened connection")
         (.set attr (timer/start conn-timer))
         (counter/inc! conn-count)))
     (channelInactive [ctx]
       (let [attr (.attr ctx connection-timer-key)]
-        (debug "closed connection")
         (counter/dec! conn-count)
         (timer/stop (.get attr))))))
 
