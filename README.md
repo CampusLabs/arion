@@ -16,7 +16,7 @@ Born of [Demeter][] and [Poseidon][], [Arion][] will reliably speak to
 [Kafka][] for you. Specifically, Arion provides an HTTP interface to the
 official Kafka producer through a durable, disk-backed queue.
 
-Arion supports Kafka 0.9.0.0 and requires Java 1.8.
+Arion supports Kafka 0.9.0.0 and 0.9.0.1, and requires Java 1.8.
 
 ## Installation
 
