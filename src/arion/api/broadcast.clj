@@ -22,7 +22,7 @@
         timer-context (timer/start sync-timer)
         response-deferred (p/put-and-complete! queue queue-name payload)]
 
-    (d/chain' closed
+    (d/chain closed
       (fn [_] (when-not (d/realized? response-deferred)
                 (info "client connection closed before response delivered")
                 (d/success! response-deferred {:status 201}))))
