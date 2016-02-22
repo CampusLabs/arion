@@ -37,7 +37,7 @@
                                 :error   "malformed URL"
                                 :details (.getMessage e)}})))))
 
-(defn route-parser [{:keys [uri] :as req}]
+(defn parse-route [{:keys [uri] :as req}]
   (match-route* r/routes uri req))
 
 (defn add-close-deferred [req]
@@ -52,34 +52,39 @@
 
 (defn make-handler
   [queue producer {:keys [success client-error server-error] :as metrics}]
-  (fn [req]
-    (d/chain'
-      (-> (d/chain' (update req :body #(and % (bs/to-byte-array %)))
-            validate-url
-            route-parser
-            #(add-close-deferred %)
-            #(r/dispatch-route % queue producer metrics)
-            #(do (meter/mark! success) %))
 
-          (d/catch' ExceptionInfo
-            (fn [e]
-              (warn "request failed with:" (.getMessage e))
-              (let [{:keys [status] :as response} (ex-data e)]
-                (if (<= 400 status 499)
-                  (meter/mark! client-error)
-                  (meter/mark! server-error))
-                response)))
+  (let [decode-body  #(and % (bs/to-byte-array %))
+        dispatch     #(r/dispatch-route % queue producer metrics)
+        mark-success #(do (meter/mark! success) %)]
 
-          (d/catch'
-            (fn [e]
-              (warn "request failed due to uncaught exception:" e)
-              (meter/mark! server-error)
-              {:status 500
-               :body   {:status  :error
-                        :message "server encountered an error processing request"
-                        :details (.getMessage e)}})))
+    (fn [req]
+      (d/chain'
+        (-> (d/chain' (update req :body decode-body)
+              validate-url
+              parse-route
+              add-close-deferred
+              dispatch
+              mark-success)
 
-      format-response)))
+            (d/catch' ExceptionInfo
+              (fn [e]
+                (warn "request failed with:" (.getMessage e))
+                (let [{:keys [status] :as response} (ex-data e)]
+                  (if (<= 400 status 499)
+                    (meter/mark! client-error)
+                    (meter/mark! server-error))
+                  response)))
+
+            (d/catch'
+              (fn [e]
+                (warn "request failed due to uncaught exception:" e)
+                (meter/mark! server-error)
+                {:status 500
+                 :body   {:status  :error
+                          :message "server encountered an error processing request"
+                          :details (.getMessage e)}})))
+
+        format-response))))
 
 (defn ^ChannelDuplexHandler idle-handler [idle-meter]
   (proxy [ChannelDuplexHandler] []
