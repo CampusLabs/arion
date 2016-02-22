@@ -43,12 +43,14 @@
 (defn add-close-deferred [req]
   (assoc req :closed (-> req ^Channel .ch .closeFuture netty/wrap-future)))
 
-(defn format-response [{:keys [request-method] :as res}]
+(defn format-response [{:keys [request-method body] :as res}]
   (if (= request-method :head)
     (assoc res :body nil)
-    (-> res
-        (update :headers assoc :content-type "application/json")
-        (update :body json/write-str))))
+    (if body
+      (-> res
+          (update :headers assoc :content-type "application/json")
+          (update :body json/write-str))
+      res)))
 
 (defn make-handler
   [queue producer {:keys [success client-error server-error] :as metrics}]
