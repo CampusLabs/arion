@@ -12,17 +12,16 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(defproject arion "1.1.4-SNAPSHOT"
+(defproject arion "1.1.3-SNAPSHOT"
   :description "Talks to Kafka so you don't have to"
   :url "https://github.com/orgsync/arion"
   :license {:name "Apache 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
-  :repositories [["bintray" {:url "https://dl.bintray.com/readytalk/maven/"}]]
   :dependencies [[aleph "0.4.1-beta3"]
                  [bidi "1.25.1"]
                  [byte-streams "0.2.1-alpha1"]
                  [camel-snake-kebab "0.3.2"]
-                 [com.readytalk/metrics3-statsd "4.1.0"]
+                 [com.basistech/metrics-statsd "3.0.0"]
                  [com.stuartsierra/component "0.3.1"]
                  [com.taoensso/timbre "4.2.1"]
                  [danlentz/clj-uuid "0.1.6"]
