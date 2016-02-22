@@ -37,7 +37,7 @@ Supply the following environment variables:
 |`KAFKA_BOOTSTRAP` | `localhost:9092` | addresses of initial Kafka brokers [(format)][boot] |
 |`STATSD_HOST` | `localhost` | [StatsD][] metrics server host |
 |`STATSD_PORT` | `8125` | [StatsD][] metrics server port |
-| `HEAP_SIZE` | `200m` | Allocated heap size (container only) |
+| `HEAP_SIZE` | `200m` | allocated heap size (container only) |
 
 Logs are written to `STDOUT`.
 
