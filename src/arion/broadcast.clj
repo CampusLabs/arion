@@ -6,24 +6,27 @@
              [stream :as s]]
             [metrics
              [counters :as counter]
+             [histograms :as histo]
              [meters :as meter]
              [timers :as timer]]
             [taoensso.timbre :refer [info warn]])
-  (:import java.time.Instant))
+  (:import [java.time Duration Instant]))
 
 (defn broadcast-payload
   [payload producer topic partition
-   {:keys [broadcast broadcast-time broadcast-error]}]
+   {:keys [broadcast broadcast-time broadcast-error message-latency]}]
 
   (d/loop []
-    (let [{:keys [key message]} @payload
+    (let [{:keys [key message enqueued]} @payload
           timer-context (timer/start broadcast-time)]
       (meter/mark! broadcast)
 
       (-> (d/chain' (p/send! producer topic key partition message)
             (fn [response]
-              (let [sent (Instant/now)]
+              (let [sent (Instant/now)
+                    duration (Duration/between enqueued sent)]
                 (timer/stop timer-context)
+                (histo/update! message-latency (.toMillis duration))
                 (p/complete! payload (assoc response :sent sent)))))
 
           (d/catch'
@@ -56,12 +59,14 @@
     (let [registry     (p/get-registry metrics)
           prefix       ["arion" "broadcast"]
           make-counter #(counter/counter registry (conj prefix %))
+          make-histo   #(histo/histogram registry (conj prefix %))
           make-meter   #(meter/meter registry (conj prefix %))
           make-timer   #(timer/timer registry (conj prefix %))
           mreg         {:partitions      (make-counter "partitions")
                         :broadcast-time  (make-timer "time")
                         :broadcast       (make-meter "attempt")
-                        :broadcast-error (make-meter "error")}]
+                        :broadcast-error (make-meter "error")
+                        :message-latency (make-histo "message_latency")}]
 
       (info "starting broadcaster")
       (consume-partitions (p/partitions partitioner) producer mreg)
