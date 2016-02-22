@@ -133,7 +133,7 @@
                            (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
                            (.addLast "idle-handler" (idle-handler idle-meter))))
 
-          handler     (make-handler queue producer mreg)]
+          handler      (make-handler queue producer mreg)]
 
       (assoc component
         :server (http/start-server
