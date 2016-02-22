@@ -13,7 +13,6 @@
             [com.stuartsierra.component :as component]
             [manifold.deferred :as d]
             [metrics
-             [counters :as counter]
              [meters :as meter]
              [timers :as timer]]
             [pjson.core :as json]
@@ -21,7 +20,6 @@
   (:import clojure.lang.ExceptionInfo
            [io.netty.channel Channel ChannelDuplexHandler ChannelPipeline]
            [io.netty.handler.timeout IdleState IdleStateEvent IdleStateHandler]
-           io.netty.util.AttributeKey
            java.io.Closeable
            [java.net URI URISyntaxException]))
 
@@ -96,19 +94,6 @@
         (meter/mark! idle-meter)
         (.close ctx)))))
 
-(def connection-timer-key (AttributeKey/valueOf "connection_duration"))
-
-(defn ^ChannelDuplexHandler connection-metrics [conn-count conn-timer]
-  (proxy [ChannelDuplexHandler] []
-    (channelActive [ctx]
-      (let [attr (.attr ctx connection-timer-key)]
-        (.set attr (timer/start conn-timer))
-        (counter/inc! conn-count)))
-    (channelInactive [ctx]
-      (let [attr (.attr ctx connection-timer-key)]
-        (counter/dec! conn-count)
-        (timer/stop (.get attr))))))
-
 (defrecord Api [port timeout metrics producer queue server]
   component/Lifecycle
   (start [component]
@@ -117,7 +102,6 @@
           prefix       ["arion" "api"]
           make-timer   #(timer/timer registry (conj prefix %))
           make-meter   #(meter/meter registry (conj prefix %))
-          make-counter #(counter/counter registry (conj prefix %))
 
           mreg         {:sync-timer     (make-timer "sync_put_time")
                         :async-timer    (make-timer "async_put_time")
@@ -126,12 +110,9 @@
                         :server-error   (make-meter "server_error")}
 
           idle-meter   (make-meter "idle_close")
-          conn-count   (make-counter "connections")
-          conn-timer   (make-timer "connection_duration")
 
           pipeline-xf  (fn [^ChannelPipeline pipeline]
                          (doto pipeline
-                           (.addFirst "connection-metrics" (connection-metrics conn-count conn-timer))
                            (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
                            (.addLast "idle-handler" (idle-handler idle-meter))))
 
