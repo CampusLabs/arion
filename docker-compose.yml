@@ -7,7 +7,7 @@ services:
       - '2181'
 
   kafka:
-    image: v1.quay.io/orgsync/kafka:0.9.0.0-1
+    image: quay.io/orgsync/kafka:0.9.0.1
     ports:
       - '9092'
     depends_on:
@@ -26,6 +26,7 @@ services:
     build: .
     ports:
       - '80:80'
+      - '3333:3333'
     depends_on:
       - kafka
       - statsd
@@ -33,3 +34,4 @@ services:
       - KAFKA_BOOTSTRAP=kafka:9092
       - STATSD_HOST=statsd
       - STATSD_PORT=8125
+      - JMX_HOSTNAME=docker

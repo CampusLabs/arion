@@ -38,6 +38,8 @@ Supply the following environment variables:
 |`STATSD_HOST` | `localhost` | [StatsD][] metrics server host |
 |`STATSD_PORT` | `8125` | [StatsD][] metrics server port |
 | `HEAP_SIZE` | `200m` | allocated heap size (container only) |
+| `JMX_PORT` | `3333` | JMX management port (container only) |
+| `JMX_HOSTNAME` | `arion` | externally accessible host name (container only) |
 
 Logs are written to `STDOUT`.
 

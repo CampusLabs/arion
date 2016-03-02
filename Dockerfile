@@ -17,6 +17,8 @@ ENV ARION_QUEUE_PATH /var/arion
 ENV KAFKA_BOOTSTRAP localhost:9092
 ENV STATSD_HOST localhost
 ENV STATSD_PORT 8125
+ENV JMX_PORT 3333
+ENV JMX_HOSTNAME arion
 
 EXPOSE 80
 VOLUME [ "/var/arion" ]
@@ -28,4 +30,11 @@ CMD exec java \
     -Xms${HEAP_SIZE} \
     -XX:MaxGCPauseMillis=10 \
     -XX:+AggressiveOpts \
+    -Dcom.sun.management.jmxremote.port=${JMX_PORT} \
+    -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} \
+    -Dcom.sun.management.jmxremote.ssl=false \
+    -Dcom.sun.management.jmxremote.authenticate=false \
+    -Dcom.sun.management.jmxremote.local.only=false \
+    -Djava.rmi.server.hostname=${JMX_HOSTNAME} \
+    -XX:+DisableAttachMechanism \
     -jar arion.jar
