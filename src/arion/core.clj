@@ -11,6 +11,7 @@
              [queue :refer [new-durable-queue]]]
             [com.stuartsierra.component :as component]
             [environ.core :refer [env]]
+            [manifold.deferred :as d]
             [metrics.meters :as meter])
   (:import [java.lang Runnable Runtime Thread]))
 
@@ -47,4 +48,5 @@
     (.addShutdownHook (Runtime/getRuntime)
                       (Thread. ^Runnable (fn []
                                            (meter/mark! stop-meter)
-                                           (component/stop s))))))
+                                           (component/stop s))))
+    @(d/deferred)))

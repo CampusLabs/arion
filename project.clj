@@ -12,22 +12,22 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(defproject arion "1.1.8"
+(defproject arion "1.1.9"
   :description "Talks to Kafka so you don't have to"
   :url "https://github.com/orgsync/arion"
   :license {:name "Apache 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
-  :dependencies [[aleph "0.4.1-beta5"]
-                 [bidi "2.0.4"]
-                 [byte-streams "0.2.1"]
-                 [camel-snake-kebab "0.3.2"]
+  :dependencies [[aleph "0.4.1"]
+                 [bidi "2.0.9"]
+                 [byte-streams "0.2.2"]
+                 [camel-snake-kebab "0.4.0"]
                  [com.basistech/metrics-statsd "3.0.0"]
                  [com.stuartsierra/component "0.3.1"]
                  [com.taoensso/timbre "4.3.1"]
                  [danlentz/clj-uuid "0.1.6"]
                  [environ "1.0.2"]
                  [factual/durable-queue "0.1.5"]
-                 [manifold "0.1.2"]
+                 [manifold "0.1.4"]
                  [metrics-clojure "2.6.1"]
                  [metrics-clojure-jvm "2.6.1"]
                  [org.apache.kafka/kafka-clients "0.9.0.1"]
