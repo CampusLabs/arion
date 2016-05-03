@@ -7,11 +7,6 @@
 > whose name remained unknown to the uninitiated.
 > — [Dictionary of Greek and Roman Biography and Mythology][DGRBM]
 
-> ...there is no man that shall catch thee by a burst of speed, neither pass
-> thee by, nay, not though in pursuit he were driving goodly Arion, the swift
-> horse of Adrastus, that was of heavenly stock
-> — [Homer, Iliad. 23.346][Homer]
-
 Born of [Demeter][] and [Poseidon][], [Arion][] will reliably speak to
 [Kafka][] for you. Specifically, Arion provides an HTTP interface to the
 official Kafka producer through a durable, disk-backed queue.
