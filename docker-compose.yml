@@ -19,6 +19,7 @@ services:
 
   statsd:
     image: quay.io/orgsync/statsd:0.1.1
+    hostname: statsd
     ports:
       - "8125/udp"
 
@@ -27,6 +28,11 @@ services:
     ports:
       - '80:80'
       - '3333:3333'
+      - '10000:10000'
+    volumes:
+      - ./:/code/
+    # working_dir: /code
+    # command: lein repl :headless :port 10000
     depends_on:
       - kafka
       - statsd
@@ -35,3 +41,4 @@ services:
       - STATSD_HOST=statsd
       - STATSD_PORT=8125
       - JMX_HOSTNAME=docker
+      - LEIN_REPL_HOST=0.0.0.0
