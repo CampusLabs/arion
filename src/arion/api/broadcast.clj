@@ -1,6 +1,7 @@
 (ns arion.api.broadcast
   (:require [arion.api.routes :as r]
             [arion.protocols :as p]
+            [gloss.core :as g]
             [manifold.deferred :as d]
             [metrics.timers :as timer]
             [taoensso.timbre :refer [info]])
@@ -46,7 +47,7 @@
 (defmethod r/dispatch-route :broadcast
   [{{:keys [mode topic key]} :route-params
     :keys [body closed]}
-   queue _ {:keys [sync-timer async-timer]}]
+   queue _ max-message-size {:keys [sync-timer async-timer]}]
 
   (let [topic (URLDecoder/decode topic)
         key   (when key (URLDecoder/decode key))]
@@ -56,6 +57,12 @@
         (ex-info "malformed topic"
                  {:status 400 :body {:status :error
                                      :error  "malformed topic"}})))
+
+    (when (> (g/byte-count body) max-message-size)
+      (throw
+        (ex-info "message too large"
+                 {:status 400 :body {:status :error
+                                     :error "message too large"}})))
 
     (case mode
       "sync" (send-sync! topic key body queue closed sync-timer)

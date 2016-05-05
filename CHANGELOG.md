@@ -4,6 +4,14 @@ change log follows the conventions of [keepachangelog.com](http://keepachangelog
 
 ## [Unreleased]
 
+## [1.2.0] - 2016-05-05
+### Added
+- Maximum message size option
+- Batched metrics
+
+### Fixed
+- Don't retry messages with fatal errors
+
 ## [1.1.0] - 2016-02-21
 ### Added
 - Connection idle timeout, enabled by default
@@ -19,5 +27,6 @@ change log follows the conventions of [keepachangelog.com](http://keepachangelog
 ## 1.0.0 - 2016-02-01
 ### Initial Release
 
-[Unreleased]: https://github.com/orgsync/arion/compare/1.1.0...HEAD
+[Unreleased]: https://github.com/orgsync/arion/compare/1.2.0...HEAD
+[1.2.0]: https://github.com/orgsync/arion/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/orgsync/arion/compare/1.0.0...1.1.0

@@ -29,6 +29,7 @@ Supply the following environment variables:
 |`ARION_PORT` | `80` | http server port |
 |`ARION_IDLE_TIMEOUT` | `15` | disconnect after specified seconds of no activity; 0 to disable |
 |`ARION_QUEUE_PATH` | `/var/arion` | directory used by the durable queue to write slabs |
+|`ARION_MAX_MESSAGE_SIZE` | `1000000` | maximum allowed message size in bytes |
 |`KAFKA_BOOTSTRAP` | `localhost:9092` | addresses of initial Kafka brokers [(format)][boot] |
 |`STATSD_HOST` | `localhost` | [StatsD][] metrics server host |
 |`STATSD_PORT` | `8125` | [StatsD][] metrics server port |

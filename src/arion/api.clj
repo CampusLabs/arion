@@ -51,10 +51,12 @@
       res)))
 
 (defn make-handler
-  [queue producer {:keys [success client-error server-error] :as metrics}]
+  [queue producer max-message-size
+   {:keys [success client-error server-error] :as metrics}]
 
   (let [decode-body  #(and % (bs/to-byte-array %))
-        dispatch     #(r/dispatch-route % queue producer metrics)
+        dispatch     #(r/dispatch-route % queue producer max-message-size
+                                        metrics)
         mark-success #(do (meter/mark! success) %)]
 
     (fn [req]
@@ -94,7 +96,7 @@
         (meter/mark! idle-meter)
         (.close ctx)))))
 
-(defrecord Api [port timeout metrics producer queue server]
+(defrecord Api [port timeout max-message-size metrics producer queue server]
   component/Lifecycle
   (start [component]
     (info "starting http server")
@@ -116,7 +118,7 @@
                            (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
                            (.addLast "idle-handler" (idle-handler idle-meter))))
 
-          handler      (make-handler queue producer mreg)]
+          handler      (make-handler queue producer max-message-size mreg)]
 
       (assoc component
         :server (http/start-server
@@ -128,5 +130,5 @@
     (.close ^Closeable server)
     (assoc component :server nil)))
 
-(defn new-api [port timeout]
-  (Api. port timeout nil nil nil nil))
+(defn new-api [port timeout max-message-size]
+  (Api. port timeout max-message-size nil nil nil nil))
