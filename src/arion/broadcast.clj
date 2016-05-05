@@ -8,8 +8,9 @@
              [counters :as counter]
              [meters :as meter]
              [timers :as timer]]
-            [taoensso.timbre :refer [info warn]])
-  (:import java.time.Instant))
+            [taoensso.timbre :refer [info warn error]])
+  (:import java.time.Instant
+           org.apache.kafka.common.errors.RetriableException))
 
 (defn broadcast-payload
   [payload producer topic partition
@@ -26,11 +27,16 @@
                 (timer/stop timer-context)
                 (p/complete! payload (assoc response :sent sent)))))
 
-          (d/catch'
+          (d/catch' RetriableException
             (fn [e]
               (warn "exception while broadcasting:" (.getMessage e))
               (meter/mark! broadcast-error)
-              (d/recur)))))))
+              (d/recur)))
+
+          (d/catch'
+            (fn [e]
+              (error "fatal exception while broadcasting:" (.getMessage e))
+              (meter/mark! broadcast-error)))))))
 
 (defn broadcast-partition
   [{:keys [topic partition stream]} producer {:keys [partitions] :as metrics}]
