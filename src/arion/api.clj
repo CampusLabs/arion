@@ -36,7 +36,13 @@
                                 :details (.getMessage e)}})))))
 
 (defn parse-route [{:keys [uri] :as req}]
-  (match-route* r/routes uri req))
+  (if-let [matched (match-route* r/routes uri req)]
+    matched
+    (throw (ex-info "unknown resource"
+                    {:status 404
+                     :body   {:status  :error
+                              :error   "unknown resource"
+                              :details {:uri uri}}}))))
 
 (defn add-close-deferred [req]
   (assoc req :closed (-> req ^Channel .ch .closeFuture netty/wrap-future)))
