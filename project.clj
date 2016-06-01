@@ -31,7 +31,7 @@
                  [metrics-clojure "2.7.0"]
                  [metrics-clojure-jvm "2.7.0"]
                  [metrics-statsd "0.1.5"]
-                 [org.apache.kafka/kafka-clients "0.10.0.0"]
+                 [org.apache.kafka/kafka-clients "0.9.0.1"]
                  [org.clojure/clojure "1.8.0"]
                  [pjson "0.3.2"]]
   :main arion.core
