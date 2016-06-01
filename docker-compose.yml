@@ -28,11 +28,12 @@ services:
     ports:
       - '80:80'
       - '3333:3333'
+      - '5005:5005'
       - '10000:10000'
     volumes:
       - ./:/code/
-    # working_dir: /code
-    # command: lein repl :headless :port 10000
+    working_dir: /code
+    command: lein repl :headless :port 10000
     depends_on:
       - kafka
       - statsd
