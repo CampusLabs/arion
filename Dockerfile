@@ -29,7 +29,7 @@ CMD exec java \
     -XX:+UseG1GC \
     -Xmx${HEAP_SIZE} \
     -Xms${HEAP_SIZE} \
-    -XX:MaxGCPauseMillis=10 \
+    -XX:MaxGCPauseMillis=100 \
     -XX:+AggressiveOpts \
     -Dcom.sun.management.jmxremote.port=${JMX_PORT} \
     -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} \
