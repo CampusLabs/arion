@@ -30,7 +30,7 @@
                  [manifold "0.1.4"]
                  [metrics-clojure "2.6.1"]
                  [metrics-clojure-jvm "2.6.1"]
-                 [metrics-statsd "0.1.2"]
+                 [metrics-statsd "0.1.5"]
                  [org.apache.kafka/kafka-clients "0.9.0.1"]
                  [org.clojure/clojure "1.8.0"]
                  [pjson "0.3.2"]]
