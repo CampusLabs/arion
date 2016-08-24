@@ -13,14 +13,14 @@
 (def topic-pattern #"(?!^\.{1,2}$)^[a-zA-Z0-9\._\-]{1,255}$")
 
 (defn compose-payload [topic key message]
-  {:topic topic
-   :key key
+  {:topic    topic
+   :key      key
    :enqueued (Instant/now)
-   :message message})
+   :message  message})
 
 (defn send-sync! [topic key message queue closed sync-timer]
-  (let [payload (compose-payload topic key message)
-        timer-context (timer/start sync-timer)
+  (let [payload           (compose-payload topic key message)
+        timer-context     (timer/start sync-timer)
         response-deferred (p/put-and-complete! queue queue-name payload)]
 
     (d/chain closed
@@ -35,18 +35,19 @@
                                (merge response))}))))
 
 (defn send-async! [topic key message queue async-timer]
-  (let [payload (compose-payload topic key message)
-        timer-context (timer/start async-timer)
-        id (p/put! queue queue-name payload)]
-    (timer/stop timer-context)
-    {:status 202 :body (-> {:status :enqueued}
-                           (merge payload)
-                           (dissoc :message)
-                           (assoc :id id))}))
+  (let [payload       (compose-payload topic key message)
+        timer-context (timer/start async-timer)]
+    (d/chain' (p/put! queue queue-name payload)
+      (fn [id]
+        (timer/stop timer-context)
+        {:status 202 :body (-> {:status :enqueued}
+                               (merge payload)
+                               (dissoc :message)
+                               (assoc :id id))}))))
 
 (defmethod r/dispatch-route :broadcast
   [{{:keys [mode topic key]} :route-params
-    :keys [body closed]}
+    :keys                    [body closed]}
    queue _ max-message-size {:keys [sync-timer async-timer]}]
 
   (let [topic (URLDecoder/decode topic)
@@ -62,7 +63,7 @@
       (throw
         (ex-info "message too large"
                  {:status 400 :body {:status :error
-                                     :error "message too large"}})))
+                                     :error  "message too large"}})))
 
     (case mode
       "sync" (send-sync! topic key body queue closed sync-timer)

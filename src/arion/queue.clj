@@ -4,7 +4,8 @@
             [com.stuartsierra.component :as component]
             [durable-queue :as q]
             [manifold.deferred :as d]
-            [taoensso.timbre :refer [error info]])
+            [taoensso.timbre :refer [error info]]
+            [manifold.stream :as s])
   (:import clojure.lang.IDeref
            java.io.Closeable))
 
@@ -22,14 +23,47 @@
 (defmethod print-method Message [s w]
   ((get-method print-method IDeref) s w))
 
-(defrecord DurableQueue [path metrics durable-queue enqueued closing?]
+(defn process-request-stream [request-stream durable-queue closing?]
+  (-> (Thread.
+        ^Runnable
+        (fn []
+          (let [{:keys [queue-name entry enqueued?]} @(s/take! request-stream)]
+            (when (and entry (not @closing?))
+              (if (q/put! durable-queue queue-name entry)
+                (d/success! enqueued? true)
+                (d/error! enqueued?
+                          (ex-info "unable to enqueue message"
+                                   {:status 503
+                                    :body   {:status :error
+                                             :error  "unable to enqueue message"}})))
+              (recur))))
+        "durable-queue-ingest")
+      (.start)))
+
+(defn put-request [request-stream queue-name entry]
+  (let [enqueued? (d/deferred)]
+    (s/put! request-stream {:queue-name queue-name
+                            :entry      entry
+                            :enqueued?  enqueued?})
+    enqueued?))
+
+(defrecord DurableQueue [path metrics durable-queue enqueued closing?
+                         request-stream]
   component/Lifecycle
   (start [component]
-    (info "opening durable queue")
-    (assoc component
-      :durable-queue (q/queues path {:fsync-take? true})
-      :enqueued (atom {})
-      :closing? (atom false)))
+    (let [durable-queue  (q/queues path {:fsync-take? true})
+          enqueued       (atom {})
+          closing?       (atom false)
+          request-stream (s/stream 1024)]
+
+      (process-request-stream request-stream durable-queue closing?)
+
+      (info "opening durable queue")
+      (assoc component
+        :durable-queue durable-queue
+        :enqueued enqueued
+        :closing? closing?
+        :request-stream request-stream)))
 
   (stop [component]
     (reset! closing? true)
@@ -40,7 +74,8 @@
     (assoc component
       :durable-queue nil
       :enqueued nil
-      :closing nil))
+      :closing nil
+      :request-stream nil))
 
   p/Queue
   (put! [queue queue-name message]
@@ -48,36 +83,30 @@
 
   (put! [_ queue-name message id]
     (let [entry {:id id :message message}]
-      (when (or @closing? (not (q/put! durable-queue queue-name entry)))
-        (throw (ex-info "unable to enqueue message"
-                        {:status 503
-                         :body   {:status :error
-                                  :error  "unable to enqueue message"}})))
-      id))
+      (put-request request-stream queue-name entry)))
 
   (put-and-complete! [queue queue-name message]
-    (let [id (uuid/v1)
-          completed (d/deferred)
-          _ (swap! enqueued assoc id completed)
-          id (p/put! queue queue-name message id)
-          untrack (fn [_] (swap! enqueued dissoc id))]
+    (let [completed (d/deferred)
+          id        (uuid/v1)
+          untrack   (fn [_] (swap! enqueued dissoc id))]
       (d/on-realized completed untrack untrack)
+      (p/put! queue queue-name message id)
       completed))
 
   (take! [_ queue-name]
-    (let [entry (q/take! durable-queue queue-name)
+    (let [entry       (q/take! durable-queue queue-name)
           {:keys [id message]} @entry
-          completed (get @enqueued id)
+          completed   (get @enqueued id)
           complete-fn (fn [metadata]
                         (when completed (d/success! completed metadata))
                         (q/complete! entry))
-          fail-fn (fn [error]
-                    (when completed (d/error! completed error))
-                    (q/complete! entry))]
+          fail-fn     (fn [error]
+                        (when completed (d/error! completed error))
+                        (q/complete! entry))]
       (Message. message complete-fn fail-fn)))
 
   p/Measurable
   (metrics [_] (q/stats durable-queue)))
 
 (defn new-durable-queue [path]
-  (DurableQueue. path nil nil nil nil))
+  (DurableQueue. path nil nil nil nil nil))
