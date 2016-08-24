@@ -89,6 +89,7 @@
     (let [completed (d/deferred)
           id        (uuid/v1)
           untrack   (fn [_] (swap! enqueued dissoc id))]
+      (swap! enqueued assoc id completed)
       (d/on-realized completed untrack untrack)
       (p/put! queue queue-name message id)
       completed))
