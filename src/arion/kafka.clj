@@ -92,6 +92,7 @@
                   :value.serializer  ByteArraySerializer
                   :acks              "all"
                   :compression.type  "gzip"
-                  :retries           (int 2147483647)}
+                  :retries           (int 2147483647)
+                  :linger.ms         (int 5)}
                  stringify-keys)
              nil nil nil))
