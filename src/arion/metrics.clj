@@ -18,7 +18,7 @@
 
   (stop [component]
     (info "stopping statsd metrics reporter")
-    (.stop reporter)
+    (future (.stop reporter))
     (assoc component :registry nil :reporter nil))
 
   p/MetricRegistry
