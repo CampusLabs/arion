@@ -15,46 +15,43 @@
 (defn broadcast-payload
   [payload producer topic partition
    {:keys [broadcast broadcast-time broadcast-error]}]
+  (d/future
+    (d/loop []
+      (let [{:keys [key message]} @payload
+            timer-context (timer/start broadcast-time)]
+        (meter/mark! broadcast)
 
-  (d/loop []
-    (let [{:keys [key message]} @payload
-          timer-context (timer/start broadcast-time)]
-      (meter/mark! broadcast)
+        (-> (d/chain' (p/send! producer topic key partition message)
+              (fn [response]
+                (let [sent (Instant/now)]
+                  (timer/stop timer-context)
+                  (p/complete! payload (assoc response :sent sent)))))
 
-      (-> (d/chain' (p/send! producer topic key partition message)
-            (fn [response]
-              (let [sent (Instant/now)]
-                (timer/stop timer-context)
-                (p/complete! payload (assoc response :sent sent)))))
+            (d/catch' RetriableException
+              (fn [e]
+                (warn "exception while broadcasting:" (.getMessage e))
+                (meter/mark! broadcast-error)
+                (d/recur)))
 
-          (d/catch' RetriableException
-            (fn [e]
-              (warn "exception while broadcasting:" (.getMessage e))
-              (meter/mark! broadcast-error)
-              (d/recur)))
-
-          (d/catch'
-            (fn [e]
-              (error "fatal exception while broadcasting:" (.getMessage e))
-              (meter/mark! broadcast-error)))))))
+            (d/catch'
+              (fn [e]
+                (error "fatal exception while broadcasting:" (.getMessage e))
+                (meter/mark! broadcast-error))))))))
 
 (defn broadcast-partition
   [{:keys [topic partition stream]} producer {:keys [partitions] :as metrics}]
   (info "broadcasting messages for topic" topic "partition" partition)
   (counter/inc! partitions)
 
-  (d/loop []
-    (d/chain' (s/take! stream)
-      #(when % (broadcast-payload % producer topic partition metrics))
-      #(if %
-        (d/recur)
-        (do (info "stopped broadcasts for topic" topic "partition" partition)
-            (counter/dec! partitions))))))
+  (d/chain' (s/consume-async
+              #(broadcast-payload % producer topic partition metrics)
+              stream)
+    (fn [_]
+      (info "stopped broadcasts for topic" topic "partition" partition)
+      (counter/dec! partitions))))
 
 (defn consume-partitions [partition-stream producer metrics]
-  (s/consume
-    #(broadcast-partition % producer metrics)
-    partition-stream))
+  (s/consume #(broadcast-partition % producer metrics) partition-stream))
 
 (defrecord Broadcaster [metrics partitioner producer]
   component/Lifecycle
