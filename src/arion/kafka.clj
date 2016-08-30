@@ -87,12 +87,13 @@
                   (.metrics producer)))))
 
 (defn new-producer [brokers]
-  (Producer. (-> {:bootstrap.servers brokers
-                  :key.serializer    StringSerializer
-                  :value.serializer  ByteArraySerializer
-                  :acks              "all"
-                  :compression.type  "gzip"
-                  :retries           (int 2147483647)
-                  :linger.ms         (int 5)}
+  (Producer. (-> {:bootstrap.servers    brokers
+                  :key.serializer       StringSerializer
+                  :value.serializer     ByteArraySerializer
+                  :acks                 "all"
+                  :compression.type     "gzip"
+                  :retries              (int 2147483647)
+                  :linger.ms            (int 5)
+                  :block.on.buffer.full true}
                  stringify-keys)
              nil nil nil))
