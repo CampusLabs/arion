@@ -28,12 +28,18 @@ Supply the following environment variables:
 |-----------|---------|--------------|
 |`ARION_PORT` | `80` | http server port |
 |`ARION_IDLE_TIMEOUT` | `15` | disconnect after specified seconds of no activity; 0 to disable |
+|`ARION_FSYNC_PUT` | `true` | whether an fsync should be performed for each put |
+|`ARION_FSYNC_TAKE` | `true` | whether an fsync should be performed for each take |
+|`ARION_FSYNC_THRESHOLD` | `100` | the maximum number of writes before an fsync |
+|`ARION_FSYNC_INTERVAL` | `100` | the maximum amount of time that can elapse before an fsync (ms) |
+|`ARION_SLAB_SIZE` | `67108864` | the size of the backing files for the queue (bytes) |
 |`ARION_QUEUE_PATH` | `/var/arion` | directory used by the durable queue to write slabs |
 |`ARION_MAX_MESSAGE_SIZE` | `1000000` | maximum allowed message size in bytes |
 |`KAFKA_BOOTSTRAP` | `localhost:9092` | addresses of initial Kafka brokers [(format)][boot] |
 |`STATSD_HOST` | `localhost` | [StatsD][] metrics server host |
 |`STATSD_PORT` | `8125` | [StatsD][] metrics server port |
 | `HEAP_SIZE` | `200m` | allocated heap size (container only) |
+| `MAX_PAUSE` | `100` | maximum GC pause time in ms (container only) |
 | `JMX_PORT` | `3333` | JMX management port (container only) |
 | `JMX_HOSTNAME` | `arion` | externally accessible host name (container only) |
 
@@ -70,8 +76,8 @@ Upon reception of the request, the message will be immediately written to the
 disk-backed durable queue and flushed to disk, but a response will not be
 returned until all in-sync replicas have confirmed receipt of the message.
 
-If the operation fails (for example, if the Kafka broker cannot be reached), 
-the message will be retried until it succeeds, which means that the request 
+If the operation fails (for example, if the Kafka broker cannot be reached),
+the message will be retried until it succeeds, which means that the request
 may be held open indefinitely if the idle timeout is disabled.
 
 Example response:

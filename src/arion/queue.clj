@@ -47,11 +47,11 @@
                             :enqueued?  enqueued?})
     enqueued?))
 
-(defrecord DurableQueue [path metrics durable-queue enqueued closing?
+(defrecord DurableQueue [path options metrics durable-queue enqueued closing?
                          request-stream]
   component/Lifecycle
   (start [component]
-    (let [durable-queue  (q/queues path {:fsync-take? true})
+    (let [durable-queue  (q/queues path options)
           enqueued       (atom {})
           closing?       (atom false)
           request-stream (s/stream 1024)]
@@ -109,5 +109,5 @@
   p/Measurable
   (metrics [_] (q/stats durable-queue)))
 
-(defn new-durable-queue [path]
-  (DurableQueue. path nil nil nil nil nil))
+(defn new-durable-queue [path options]
+  (DurableQueue. path options nil nil nil nil nil))

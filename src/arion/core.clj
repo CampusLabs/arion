@@ -17,9 +17,9 @@
 
 (defn create-system []
   (-> (component/system-map
-        :api (new-api (Integer. ^String (env :arion-port "80"))
-                      (Integer. ^String (env :arion-idle-timeout "15"))
-                      (Integer. ^String (env :arion-max-message-size
+        :api (new-api (Integer/parseInt (env :arion-port "80"))
+                      (Integer/parseInt (env :arion-idle-timeout "15"))
+                      (Integer/parseInt (env :arion-max-message-size
                                              "1000000")))
         :broadcaster (new-broadcaster)
         :gauge-reporter (new-gauge-reporter)
@@ -29,15 +29,27 @@
         :partitioner (new-partitioner)
         :producer (new-producer (env :kafka-bootstrap "localhost:9092"))
         :queue (new-durable-queue
-                 (env :arion-queue-path "/var/arion")))
+                 (env :arion-queue-path "/var/arion")
+                 {:slab-size       (-> (env :arion-slab-size "67108864")
+                                       (Long/parseLong))
+                  :fsync-put?      (-> ^String (env :arion-fsync-put "true")
+                                       (Boolean/valueOf)
+                                       boolean)
+                  :fsync-take?     (-> ^String (env :arion-fsync-take "true")
+                                       (Boolean/valueOf)
+                                       boolean)
+                  :fsync-threshold (-> (env :arion-fsync-threshold "100")
+                                       (Long/parseLong))
+                  :fsync-interval  (-> (env :arion-fsync-interval "100")
+                                       (Long/parseLong))}))
 
       (component/system-using
-        {:api [:metrics :producer :queue]
-         :broadcaster [:metrics :partitioner :producer]
+        {:api            [:metrics :producer :queue]
+         :broadcaster    [:metrics :partitioner :producer]
          :gauge-reporter [:metrics :queue :producer]
-         :partitioner [:metrics :producer :queue]
-         :producer [:metrics]
-         :queue [:metrics]})))
+         :partitioner    [:metrics :producer :queue]
+         :producer       [:metrics]
+         :queue          [:metrics]})))
 
 (defn -main [& _]
   (let [{:keys [metrics] :as s} (-> (create-system)
