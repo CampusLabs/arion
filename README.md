@@ -30,8 +30,8 @@ Supply the following environment variables:
 |`ARION_IDLE_TIMEOUT` | `15` | disconnect after specified seconds of no activity; 0 to disable |
 |`ARION_FSYNC_PUT` | `true` | whether an fsync should be performed for each put |
 |`ARION_FSYNC_TAKE` | `true` | whether an fsync should be performed for each take |
-|`ARION_FSYNC_THRESHOLD` | `100` | the maximum number of writes before an fsync |
-|`ARION_FSYNC_INTERVAL` | `100` | the maximum amount of time that can elapse before an fsync (ms) |
+|`ARION_FSYNC_THRESHOLD` | | the maximum number of writes before an fsync |
+|`ARION_FSYNC_INTERVAL` | | the maximum amount of time that can elapse before an fsync (ms) |
 |`ARION_SLAB_SIZE` | `67108864` | the size of the backing files for the queue (bytes) |
 |`ARION_QUEUE_PATH` | `/var/arion` | directory used by the durable queue to write slabs |
 |`ARION_MAX_MESSAGE_SIZE` | `1000000` | maximum allowed message size in bytes |

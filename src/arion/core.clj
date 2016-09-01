@@ -9,6 +9,7 @@
              [partitioner :refer [new-partitioner]]
              [protocols :as p]
              [queue :refer [new-durable-queue]]]
+            [clojure.string :refer [blank?]]
             [com.stuartsierra.component :as component]
             [environ.core :refer [env]]
             [manifold.deferred :as d]
@@ -38,10 +39,12 @@
                   :fsync-take?     (-> ^String (env :arion-fsync-take "true")
                                        (Boolean/valueOf)
                                        boolean)
-                  :fsync-threshold (-> (env :arion-fsync-threshold "100")
-                                       (Long/parseLong))
-                  :fsync-interval  (-> (env :arion-fsync-interval "100")
-                                       (Long/parseLong))}))
+                  :fsync-threshold (let [t (env :arion-fsync-threshold "")]
+                                     (when-not (blank? t)
+                                       (Long/parseLong t)))
+                  :fsync-interval  (let [i (env :arion-fsync-interval "")]
+                                     (when-not (blank? i)
+                                       (Long/parseLong i)))}))
 
       (component/system-using
         {:api            [:metrics :producer :queue]
