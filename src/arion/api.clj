@@ -15,13 +15,18 @@
             [metrics
              [meters :as meter]
              [timers :as timer]]
-            [pjson.core :as json]
+            [cheshire
+             [core :as json]
+             [generate :as gen]]
             [taoensso.timbre :refer [info warn]])
   (:import clojure.lang.ExceptionInfo
            [io.netty.channel Channel ChannelDuplexHandler ChannelPipeline]
            [io.netty.handler.timeout IdleState IdleStateEvent IdleStateHandler]
            java.io.Closeable
-           [java.net URI URISyntaxException]))
+           [java.net URI URISyntaxException]
+           java.time.Instant))
+
+(gen/add-encoder Instant gen/encode-str)
 
 (defn validate-url [{:keys [uri] :as req}]
   (try
@@ -53,7 +58,7 @@
     (if body
       (-> res
           (update :headers assoc :content-type "application/json")
-          (update :body json/write-str))
+          (update :body json/generate-string))
       res)))
 
 (defn make-handler

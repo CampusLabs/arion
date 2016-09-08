@@ -15,7 +15,7 @@ services:
     hostname: kafka
     environment:
       - ADVERTISED_HOST_NAME=kafka
-      - TOPIC_PARTITIONS=80
+      - TOPIC_PARTITIONS=8
 
   statsd:
     image: quay.io/orgsync/statsd:0.1.1
@@ -30,16 +30,23 @@ services:
       - '3333:3333'
       - '5005:5005'
       - '10000:10000'
-    volumes:
-      - ./:/code/
-    working_dir: /code
-    command: lein repl :headless :port 10000
+#    volumes:
+#      - ./:/code/
+#    working_dir: /code
+#    command: lein repl :headless :port 10000
     depends_on:
       - kafka
       - statsd
     environment:
+      - HEAP_SIZE=4G
+      - MAX_PAUSE=1000
       - KAFKA_BOOTSTRAP=kafka:9092
       - STATSD_HOST=statsd
       - STATSD_PORT=8125
       - JMX_HOSTNAME=docker
       - LEIN_REPL_HOST=0.0.0.0
+      - ARION_FSYNC_PUT=false
+      - ARION_FSYNC_TAKE=false
+      - ARION_FSYNC_THRESHOLD=10000
+      - ARION_FSYNC_INTERVAL=10000
+      - ARION_SLAB_SIZE=1073741824
