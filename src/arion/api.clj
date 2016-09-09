@@ -109,6 +109,7 @@
 
 (defn make-rejected-handler [{:keys [server-error]}]
   (fn [_]
+    (warn "executor queue full; unable to enqueue request")
     (meter/mark! server-error)
     (-> {:status 503
          :body   {:status  :error
