@@ -48,17 +48,21 @@
                                (dissoc :message)
                                (assoc :id id))}))))
 
-(defn enqueue-message [queue topic key message response-stream]
-  (let [payload  (compose-payload topic key (b/to-byte-array message))
-        response (p/put-and-complete! queue queue-name payload)]
-    (s/put! response-stream response)))
+(defn enqueue-message [queue topic key message response-stream websocket-timer]
+  (let [timer-context (timer/start websocket-timer)
+        payload       (compose-payload topic key (b/to-byte-array message))
+        response      (p/put-and-complete! queue queue-name payload)]
+    (d/let-flow' [success? (s/put! response-stream response)]
+      (timer/stop timer-context)
+      success?)))
 
-(defn enqueue-messages [socket queue topic key response-stream]
+(defn enqueue-messages [socket queue topic key response-stream websocket-timer]
   (d/loop []
     (d/let-flow' [message  (s/take! socket)
                   success? (when message
                              (enqueue-message queue topic key message
-                                              response-stream))]
+                                              response-stream
+                                              websocket-timer))]
       (when success? (d/recur)))))
 
 (defn return-responses [socket response-stream]
@@ -69,13 +73,14 @@
                   success? (when response (s/put! socket response))]
       (when success? (d/recur)))))
 
-(defn send-websocket! [request topic key queue max-message-size]
+(defn send-websocket! [request topic key queue max-message-size websocket-timer]
   (d/let-flow' [response-stream (s/stream max-inflight-requests)
                 socket          (http/websocket-connection
                                   request {:max-frame-size max-message-size
                                            :raw-stream?    true})]
     (-> (d/zip'
-          (enqueue-messages socket queue topic key response-stream)
+          (enqueue-messages socket queue topic key response-stream
+                            websocket-timer)
           (return-responses socket response-stream))
         (d/chain' (fn [_] {:status 200}))
         (d/catch'
@@ -90,7 +95,7 @@
   [{{:keys [mode topic key]} :route-params
     :keys                    [body closed]
     :as                      request}
-   queue _ max-message-size {:keys [sync-timer async-timer]}]
+   queue _ max-message-size {:keys [sync-timer async-timer websocket-timer]}]
 
   (let [topic (v/validate-topic topic)
         key   (when key (v/validate-key key))
@@ -99,7 +104,8 @@
     (case mode
       "sync" (send-sync! topic key body queue closed sync-timer)
       "async" (send-async! topic key body queue async-timer)
-      "websocket" (send-websocket! request topic key queue max-message-size)
+      "websocket" (send-websocket! request topic key queue max-message-size
+                                   websocket-timer)
       (throw
         (ex-info "unsupported broadcast mode"
                  {:status 400 :body {:status :error

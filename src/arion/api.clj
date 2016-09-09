@@ -120,25 +120,26 @@
   component/Lifecycle
   (start [component]
     (info "starting http server")
-    (let [registry     (p/get-registry metrics)
-          prefix       ["arion" "api"]
-          make-timer   #(timer/timer registry (conj prefix %))
-          make-meter   #(meter/meter registry (conj prefix %))
+    (let [registry    (p/get-registry metrics)
+          prefix      ["arion" "api"]
+          make-timer  #(timer/timer registry (conj prefix %))
+          make-meter  #(meter/meter registry (conj prefix %))
 
-          mreg         {:sync-timer     (make-timer "sync_put_time")
-                        :async-timer    (make-timer "async_put_time")
-                        :success        (make-meter "success")
-                        :client-error   (make-meter "client_error")
-                        :server-error   (make-meter "server_error")}
+          mreg        {:sync-timer      (make-timer "sync_put_time")
+                       :async-timer     (make-timer "async_put_time")
+                       :websocket-timer (make-timer "websocket_put_time")
+                       :success         (make-meter "success")
+                       :client-error    (make-meter "client_error")
+                       :server-error    (make-meter "server_error")}
 
-          idle-meter   (make-meter "idle_close")
+          idle-meter  (make-meter "idle_close")
 
-          pipeline-xf  (fn [^ChannelPipeline pipeline]
-                         (doto pipeline
-                           (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
-                           (.addLast "idle-handler" (idle-handler idle-meter))))
+          pipeline-xf (fn [^ChannelPipeline pipeline]
+                        (doto pipeline
+                          (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
+                          (.addLast "idle-handler" (idle-handler idle-meter))))
 
-          handler      (make-handler queue producer max-message-size mreg)]
+          handler     (make-handler queue producer max-message-size mreg)]
 
       (assoc component
         :server (http/start-server
