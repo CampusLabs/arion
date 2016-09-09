@@ -107,6 +107,15 @@
         (meter/mark! idle-meter)
         (.close ctx)))))
 
+(defn make-rejected-handler [{:keys [server-error]}]
+  (fn [_]
+    (meter/mark! server-error)
+    (-> {:status 503
+         :body   {:status  :error
+                  :message "too many concurrent requests; backoff and retry"
+                  :details "executor queue is full and the request cannot be processed"}}
+        format-response)))
+
 (defrecord Api [port timeout max-message-size metrics producer queue server]
   component/Lifecycle
   (start [component]
@@ -133,7 +142,9 @@
 
       (assoc component
         :server (http/start-server
-                  handler {:port port
+                  handler {:port               port
+                           :raw-stream?        true
+                           :rejected-handler   (make-rejected-handler mreg)
                            :pipeline-transform pipeline-xf}))))
 
   (stop [component]
