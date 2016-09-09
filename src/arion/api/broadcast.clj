@@ -65,10 +65,12 @@
                                               websocket-timer))]
       (when success? (d/recur)))))
 
-(defn return-responses [socket response-stream]
+(defn return-responses [socket response-stream key]
   (d/loop []
     (d/let-flow' [status   (s/take! response-stream)
-                  response (when status (-> (assoc status :status :sent)
+                  response (when status (-> (assoc status
+                                              :status :sent
+                                              :key key)
                                             json/generate-string))
                   success? (when response (s/put! socket response))]
       (when success? (d/recur)))))
@@ -81,7 +83,7 @@
     (-> (d/zip'
           (enqueue-messages socket queue topic key response-stream
                             websocket-timer)
-          (return-responses socket response-stream))
+          (return-responses socket response-stream key))
         (d/chain' (fn [_] {:status 200}))
         (d/catch'
           (fn [e]
