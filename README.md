@@ -53,7 +53,8 @@ interruptions. The number of Kafka partitions drives concurrency. Each
 partition only has one message being sent or retried at any given time so
 partition order is preserved.
 
-Synchronous and asynchronous message production are supported:
+Synchronous, asynchronous, and websocket message production are
+supported:
 
 ### Synchronous Message Production
 
@@ -143,6 +144,44 @@ timestamp when the message was enqueued, and an internal unique identifier
 used to identify the message while it is being sent to Kafka. The partition
 is not yet known because obtaining the partitions for a given topic may block
 during Kafka failure.
+
+### Websocket Message Production
+
+```
+GET ws://<host>:<port>/websocket/<topic>[/key]
+```
+
+Synchronous and asynchronous production offer clear guarantees, but at
+the cost of additional overhead. When throughput is critical, websocket
+production may be appropriate.
+
+Websocket requests accept identical parameters as synchronous and
+asynchronous requests. However, rather than returning a response body a
+websocket connection is made. Messages sent to the socket are enqueued
+and broadcasted to the given topic in the order in which they are sent,
+optionally with a specified key.
+
+After the message is acked by all in-sync replicas, a responses is
+returned on the socket. Message responses are sent in the order in
+which the messages were enqueued. It is possible to have hundreds of
+un-acked requests in flight that have not been written to the durable
+queue, so there is no guarantee that a request has been or ever will be
+broadcasted to a topic partition until a response is received.
+
+Like all connections, websockets are disconnected after
+`ARION_IDLE_TIMEOUT` seconds of inactivity.
+
+```
+# wscat -c ws://arion/websocket/test
+connected (press CTRL+C to quit)
+> test1
+< {"topic":"test","partition":7,"offset":0,"sent":"2016-09-09T00:24:45.387Z","status":"sent"}
+> test2
+< {"topic":"test","partition":6,"offset":0,"sent":"2016-09-09T00:24:53.507Z","status":"sent"}
+> test1
+< {"topic":"test","partition":1,"offset":0,"sent":"2016-09-09T00:25:00.183Z","status":"sent"}
+disconnected
+```
 
 ### Status
 
