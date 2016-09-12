@@ -24,11 +24,25 @@
   (:import clojure.lang.ExceptionInfo
            [io.netty.channel Channel ChannelDuplexHandler ChannelPipeline]
            [io.netty.handler.timeout IdleState IdleStateEvent IdleStateHandler]
+           io.netty.util.AttributeKey
            java.io.Closeable
            [java.net URI URISyntaxException]
            java.time.Instant))
 
 (gen/add-encoder Instant gen/encode-str)
+
+(def connection-timer-key (AttributeKey/valueOf "connection_duration"))
+
+(defn ^ChannelDuplexHandler connection-tracker [conn-count conn-timer]
+  (proxy [ChannelDuplexHandler] []
+    (channelActive [ctx]
+      (let [attr (.attr ctx connection-timer-key)]
+        (.set attr (timer/start conn-timer))
+        (counter/inc! conn-count)))
+    (channelInactive [ctx]
+      (let [attr (.attr ctx connection-timer-key)]
+        (counter/dec! conn-count)
+        (timer/stop (.get attr))))))
 
 (defn validate-url [{:keys [uri] :as req}]
   (try
@@ -51,6 +65,9 @@
                               :error   "unknown resource"
                               :details {:uri uri}}}))))
 
+(defn add-close-deferred [req]
+  (assoc req :closed (-> req ^Channel .ch .closeFuture netty/wrap-future)))
+
 (defn format-response [{:keys [request-method body] :as res}]
   (if (= request-method :head)
     (assoc res :body nil)
@@ -62,15 +79,9 @@
 
 (defn make-handler
   [queue producer max-message-size
-   {:keys [success client-error server-error connections] :as metrics}]
+   {:keys [success client-error server-error] :as metrics}]
 
   (let [decode-body  #(and % (bs/to-byte-array %))
-        add-closed   #(do
-                       (counter/inc! connections)
-                       (let [closed (-> % ^Channel .ch .closeFuture
-                                        netty/wrap-future)]
-                         (d/chain closed (fn [_] (counter/dec! connections)))
-                         (assoc % :closed closed)))
         dispatch     #(r/dispatch-route % queue producer max-message-size
                                         metrics)
         mark-success #(do (meter/mark! success) %)]
@@ -80,7 +91,7 @@
         (-> (d/chain' (update req :body decode-body)
               validate-url
               parse-route
-              add-closed
+              add-close-deferred
               dispatch
               mark-success)
 
@@ -132,18 +143,22 @@
           make-meter   #(meter/meter registry (conj prefix %))
           make-counter #(counter/counter registry (conj prefix %))
 
+          conn-count   (make-counter "connections")
+          conn-timer   (make-timer "connection_duration")
+
           mreg         {:sync-timer      (make-timer "sync_put_time")
                         :async-timer     (make-timer "async_put_time")
                         :websocket-timer (make-timer "websocket_put_time")
                         :success         (make-meter "success")
                         :client-error    (make-meter "client_error")
-                        :server-error    (make-meter "server_error")
-                        :connections     (make-counter "connections")}
+                        :server-error    (make-meter "server_error")}
 
           idle-meter   (make-meter "idle_close")
 
           pipeline-xf  (fn [^ChannelPipeline pipeline]
                          (doto pipeline
+                           (.addFirst "conn-state" (connection-tracker
+                                                     conn-count conn-timer))
                            (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
                            (.addLast "idle-handler" (idle-handler idle-meter))))
 
