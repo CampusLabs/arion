@@ -13,12 +13,14 @@
             [com.stuartsierra.component :as component]
             [manifold.deferred :as d]
             [metrics
+             [counters :as count]
              [meters :as meter]
              [timers :as timer]]
             [cheshire
              [core :as json]
              [generate :as gen]]
-            [taoensso.timbre :refer [info warn]])
+            [taoensso.timbre :refer [info warn]]
+            [metrics.counters :as counter])
   (:import clojure.lang.ExceptionInfo
            [io.netty.channel Channel ChannelDuplexHandler ChannelPipeline]
            [io.netty.handler.timeout IdleState IdleStateEvent IdleStateHandler]
@@ -49,9 +51,6 @@
                               :error   "unknown resource"
                               :details {:uri uri}}}))))
 
-(defn add-close-deferred [req]
-  (assoc req :closed (-> req ^Channel .ch .closeFuture netty/wrap-future)))
-
 (defn format-response [{:keys [request-method body] :as res}]
   (if (= request-method :head)
     (assoc res :body nil)
@@ -63,9 +62,15 @@
 
 (defn make-handler
   [queue producer max-message-size
-   {:keys [success client-error server-error] :as metrics}]
+   {:keys [success client-error server-error connections] :as metrics}]
 
   (let [decode-body  #(and % (bs/to-byte-array %))
+        add-closed   #(do
+                       (counter/inc! connections)
+                       (let [closed (-> % ^Channel .ch .closeFuture
+                                        netty/wrap-future)]
+                         (d/chain closed (fn [_] (counter/dec! connections)))
+                         (assoc % :closed closed)))
         dispatch     #(r/dispatch-route % queue producer max-message-size
                                         metrics)
         mark-success #(do (meter/mark! success) %)]
@@ -75,7 +80,7 @@
         (-> (d/chain' (update req :body decode-body)
               validate-url
               parse-route
-              add-close-deferred
+              add-closed
               dispatch
               mark-success)
 
@@ -121,26 +126,28 @@
   component/Lifecycle
   (start [component]
     (info "starting http server")
-    (let [registry    (p/get-registry metrics)
-          prefix      ["arion" "api"]
-          make-timer  #(timer/timer registry (conj prefix %))
-          make-meter  #(meter/meter registry (conj prefix %))
+    (let [registry     (p/get-registry metrics)
+          prefix       ["arion" "api"]
+          make-timer   #(timer/timer registry (conj prefix %))
+          make-meter   #(meter/meter registry (conj prefix %))
+          make-counter #(counter/counter registry (conj prefix %))
 
-          mreg        {:sync-timer      (make-timer "sync_put_time")
-                       :async-timer     (make-timer "async_put_time")
-                       :websocket-timer (make-timer "websocket_put_time")
-                       :success         (make-meter "success")
-                       :client-error    (make-meter "client_error")
-                       :server-error    (make-meter "server_error")}
+          mreg         {:sync-timer      (make-timer "sync_put_time")
+                        :async-timer     (make-timer "async_put_time")
+                        :websocket-timer (make-timer "websocket_put_time")
+                        :success         (make-meter "success")
+                        :client-error    (make-meter "client_error")
+                        :server-error    (make-meter "server_error")
+                        :connections     (make-counter "connections")}
 
-          idle-meter  (make-meter "idle_close")
+          idle-meter   (make-meter "idle_close")
 
-          pipeline-xf (fn [^ChannelPipeline pipeline]
-                        (doto pipeline
-                          (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
-                          (.addLast "idle-handler" (idle-handler idle-meter))))
+          pipeline-xf  (fn [^ChannelPipeline pipeline]
+                         (doto pipeline
+                           (.addLast "idle-state" (IdleStateHandler. 0 0 timeout))
+                           (.addLast "idle-handler" (idle-handler idle-meter))))
 
-          handler     (make-handler queue producer max-message-size mreg)]
+          handler      (make-handler queue producer max-message-size mreg)]
 
       (assoc component
         :server (http/start-server
