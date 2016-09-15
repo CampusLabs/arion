@@ -86,7 +86,7 @@
     (into {} (map (juxt metric->name metric->value)
                   (.metrics producer)))))
 
-(defn new-producer [brokers]
+(defn new-producer [brokers max-message-size]
   (Producer. (-> {:bootstrap.servers    brokers
                   :key.serializer       StringSerializer
                   :value.serializer     ByteArraySerializer
@@ -94,6 +94,7 @@
                   :compression.type     "gzip"
                   :retries              (int 2147483647)
                   :linger.ms            (int 5)
-                  :block.on.buffer.full true}
+                  :block.on.buffer.full true
+                  :max.request.size     (+ max-message-size 128)}
                  stringify-keys)
              nil nil nil))
