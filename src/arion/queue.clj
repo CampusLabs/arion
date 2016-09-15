@@ -4,6 +4,7 @@
             [com.stuartsierra.component :as component]
             [durable-queue :as q]
             [manifold.deferred :as d]
+            [metrics.histograms :as h]
             [taoensso.timbre :refer [error info]]
             [manifold.stream :as s])
   (:import clojure.lang.IDeref
@@ -48,13 +49,15 @@
     enqueued?))
 
 (defrecord DurableQueue [path options metrics durable-queue enqueued closing?
-                         request-stream]
+                         request-stream message-size]
   component/Lifecycle
   (start [component]
     (let [durable-queue  (q/queues path options)
           enqueued       (atom {})
           closing?       (atom false)
-          request-stream (s/stream 1024)]
+          request-stream (s/stream 1024)
+          registry       (p/get-registry metrics)
+          message-size   (h/histogram registry ["arion" "queue" "message_size"])]
 
       (process-request-stream request-stream durable-queue closing?)
 
@@ -63,7 +66,8 @@
         :durable-queue durable-queue
         :enqueued enqueued
         :closing? closing?
-        :request-stream request-stream)))
+        :request-stream request-stream
+        :message-size message-size)))
 
   (stop [component]
     (reset! closing? true)
@@ -75,7 +79,8 @@
       :durable-queue nil
       :enqueued nil
       :closing nil
-      :request-stream nil))
+      :request-stream nil
+      :message-size nil))
 
   p/Queue
   (put! [queue queue-name message]
@@ -83,6 +88,7 @@
 
   (put! [_ queue-name message id]
     (let [entry {:id id :message message}]
+      (h/update! message-size (count message))
       (put-request request-stream queue-name entry)))
 
   (put-and-complete! [queue queue-name message]
@@ -110,4 +116,4 @@
   (metrics [_] (q/stats durable-queue)))
 
 (defn new-durable-queue [path options]
-  (DurableQueue. path options nil nil nil nil nil))
+  (DurableQueue. path options nil nil nil nil nil nil))
