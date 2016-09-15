@@ -88,7 +88,7 @@
 
   (put! [_ queue-name message id]
     (let [entry {:id id :message message}]
-      (h/update! message-size (count message))
+      (h/update! message-size (count (:message message)))
       (put-request request-stream queue-name entry)))
 
   (put-and-complete! [queue queue-name message]
