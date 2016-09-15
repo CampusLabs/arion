@@ -95,6 +95,6 @@
                   :retries              (int 2147483647)
                   :linger.ms            (int 5)
                   :block.on.buffer.full true
-                  :max.request.size     (+ max-message-size 128)}
+                  :max.request.size     (int (+ max-message-size 128))}
                  stringify-keys)
              nil nil nil))
