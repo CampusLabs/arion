@@ -55,7 +55,7 @@
     (let [durable-queue  (q/queues path options)
           enqueued       (atom {})
           closing?       (atom false)
-          request-stream (s/stream 1024)
+          request-stream (s/stream 128)
           registry       (p/get-registry metrics)
           message-size   (h/histogram registry ["arion" "queue" "message_size"])]
 
