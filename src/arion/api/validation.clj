@@ -24,9 +24,13 @@
                                           :error  "malformed key"}})))))
 
 (defn validate-body [body max-message-size]
-  (when (> (g/byte-count body) max-message-size)
-    (throw
-      (ex-info "message too large"
-               {:status 400 :body {:status :error
-                                   :error  "message too large"}})))
+  (let [message-size (g/byte-count body)]
+    (when (> message-size max-message-size)
+      (throw
+        (ex-info (str "message too large (" message-size " bytes > "
+                      max-message-size " bytes)")
+                 {:status 400 :body {:status :error
+                                     :error  "message too large"
+                                     :size message-size
+                                     :limit max-message-size}}))))
   body)
